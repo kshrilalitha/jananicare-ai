@@ -1,0 +1,11 @@
+{
+  "name": "jananicare-ai",
+  "version": "1.0.0",
+  "description": "JananiCare AI - Smart Maternal Risk Prediction & Emergency Care Coordination Platform",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../ai-api && pip install -r requirements.txt",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev:ai": "cd ai-api && python app.py"
+  }
+}
