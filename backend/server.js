@@ -6,9 +6,11 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const dotenv = require('dotenv');
 dotenv.config();
+console.log("API KEY:", process.env.FAST2SMS_API_KEY);
 
 const AI_API_URL = process.env.AI_API_URL || 'http://localhost:5001';
 const JWT_SECRET = process.env.JWT_SECRET || 'jananicare_secret_key_2024';
+
 
 // ══════════════════════════════════════════════════════════
 // MONGOOSE SCHEMAS & MODELS
@@ -134,6 +136,19 @@ mongoose.connect(MONGODB_URI)
 // ══════════════════════════════════════════════════════════
 
 const app = express();
+
+const http = require('http');
+const { Server } = require('socket.io');
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
+
+io.on('connection', (socket) => {
+  console.log("Client connected");
+});
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
@@ -634,10 +649,36 @@ function getHealthTips(riskLevel) {
 
 // ── Start Server ───────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 JananiCare AI Backend running on port ${PORT}`);
+
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🍃 MongoDB: ${MONGODB_URI}`);
   console.log(`🤖 AI API: ${AI_API_URL}`);
 });
 
+
+app.post('/api/alerts/sos', async (req, res) => {
+  try {
+    const { userId, lat, lng } = req.body;
+
+    const user = await User.findById(userId);
+
+    console.log("🚨 SOS REQUEST:", user.name, lat, lng);
+
+    // 🔔 SEND REAL-TIME ALERT
+    io.emit('sos-alert', {
+      name: user.name,
+      lat,
+      lng
+    });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+});
 module.exports = app;
+
+

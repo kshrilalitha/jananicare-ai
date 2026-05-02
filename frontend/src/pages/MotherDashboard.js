@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { getLocation } from '../services/location';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { getMotherDashboard, saveAlert } from '../services/dataService';
 import Navbar from '../components/Navbar';
 import './MotherDashboard.css';
+
+
 
 const MotherDashboard = () => {
   const { user } = useAuth();
@@ -32,27 +35,48 @@ const MotherDashboard = () => {
   };
 
   const handleOneTapHelp = async () => {
-    setSendingAlert(true);
-    try {
-      await saveAlert({
+  setSendingAlert(true);
+
+  try {
+   
+
+    // 📍 Get location
+    const { lat, lng } = await getLocation();
+
+
+    // 📩 Send to backend (SMS)
+    await fetch('/api/alerts/sos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         userId: user.uid,
-        userName: user.name,
-        alertType: 'one_tap_help',
-        severity: 'critical',
-        title: '🆘 ONE TAP EMERGENCY HELP',
-        message: `EMERGENCY: ${user.name} has requested immediate help! Location: ${user.village || 'Unknown'}, ${user.district || 'Unknown'}. Please respond immediately!`,
-        village: user.village || '',
-        district: user.district || ''
-      });
-      setAlertSent(true);
-      setTimeout(() => setAlertSent(false), 5000);
-    } catch (err) {
-      setAlertSent(true);
-      setTimeout(() => setAlertSent(false), 5000);
-    } finally {
-      setSendingAlert(false);
-    }
-  };
+        lat,
+        lng
+      })
+    });
+
+    // 💾 (optional) still save alert in DB
+    await saveAlert({
+      userId: user.uid,
+      userName: user.name,
+      alertType: 'one_tap_help',
+      severity: 'critical',
+      title: '🆘 ONE TAP EMERGENCY HELP',
+      message: `EMERGENCY: ${user.name} needs help! Location: https://maps.google.com/?q=${lat},${lng}`,
+      village: user.village || '',
+      district: user.district || ''
+    });
+
+    setAlertSent(true);
+    setTimeout(() => setAlertSent(false), 5000);
+
+  } catch (err) {
+    console.error(err);
+    alert("Error sending SOS");
+  } finally {
+    setSendingAlert(false);
+  }
+};
 
   if (loading) {
     return (

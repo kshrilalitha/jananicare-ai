@@ -4,6 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { getAshaDashboard, acknowledgeAlert } from '../services/dataService';
 import Navbar from '../components/Navbar';
 import './AshaWorkerDashboard.css';
+import { io } from "socket.io-client";
+import { startAlarm,stopAlarm } from "../services/alarm";
+
+
 
 const AshaWorkerDashboard = () => {
   const { user } = useAuth();
@@ -18,6 +22,58 @@ const AshaWorkerDashboard = () => {
     fetchDashboard();
   }, []);
 
+  useEffect(() => {
+  const socket = io("http://localhost:5000");
+
+  socket.on("sos-alert", (newAlert) => {
+  console.log("SOS RECEIVED:", newAlert);
+
+  startAlarm();
+
+  setData(prevData => {
+    if (!prevData) return prevData;
+
+    return {
+      ...prevData,
+      pendingAlerts: [
+        {
+          _id: Date.now(),
+          title: "🚨 Emergency Alert",
+          message: `EMERGENCY: ${newAlert.name} needs help!`,
+          severity: "critical",
+          status: "pending",
+          createdAt: new Date().toISOString(),
+          motherId: {
+            name: newAlert.name
+          },
+          location: `https://maps.google.com/?q=${newAlert.lat},${newAlert.lng}`
+        },
+        ...(prevData.pendingAlerts || [])
+      ]
+    };
+  });
+});
+  return () => socket.disconnect();
+}, []);
+
+  useEffect(() => {
+  const enableAudio = () => {
+    const tempAudio = new Audio("/alarm.mp3");
+
+    tempAudio.play()
+      .then(() => {
+        tempAudio.pause();
+        tempAudio.currentTime = 0;
+        console.log("✅ Audio unlocked");
+      })
+      .catch(() => {});
+
+    document.removeEventListener("click", enableAudio);
+  };
+
+  document.addEventListener("click", enableAudio);
+}, []);
+
   const fetchDashboard = async () => {
     try {
       const dashData = await getAshaDashboard();
@@ -31,13 +87,17 @@ const AshaWorkerDashboard = () => {
   };
 
   const handleAcknowledgeAlert = async (alertId) => {
-    try {
-      await acknowledgeAlert(alertId);
-      fetchDashboard();
-    } catch (err) {
-      console.error('Acknowledge error:', err);
-    }
-  };
+  try {
+    stopAlarm();
+
+    await acknowledgeAlert(alertId);
+
+    fetchDashboard();
+
+  } catch (err) {
+    console.error('Acknowledge error:', err);
+  }
+};
 
   if (loading) {
     return (
@@ -266,6 +326,33 @@ const AlertCard = ({ alert, onAcknowledge }) => {
         <div className="alert-info">
           <h3>{alert.title}</h3>
           <p>{alert.message}</p>
+          <div style={{
+              marginTop: "10px",
+              padding: "10px",
+              borderRadius: "10px",
+              background: "#f1f5f9",
+              border: "1px solid #e2e8f0"
+            }}>
+  <div style={{ marginBottom: "6px", fontSize: "13px", color: "#64748b" }}>
+    📍 Patient Location
+  </div>
+
+  <a
+    href={alert.location}
+    target="_blank"
+    rel="noopener noreferrer"
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      textDecoration: "none",
+      color: "#1e293b",
+      fontWeight: "500"
+    }}
+  >
+    Open in Google Maps →
+  </a>
+          </div>
         </div>
         <div className="alert-meta">
           <span className="alert-time">
