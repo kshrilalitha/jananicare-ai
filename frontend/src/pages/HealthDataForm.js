@@ -46,6 +46,7 @@ const HealthDataForm = () => {
     previousComplications: false,
     previousComplicationDetails: '',
     symptoms: [],
+    customSymptoms: [],
     voiceSymptomText: '',
     dietType: 'vegetarian',
     ironSupplements: false,
@@ -73,50 +74,150 @@ const HealthDataForm = () => {
     });
   };
 
+  // Keyword-to-symptom mapping for voice detection
+  const SYMPTOM_KEYWORDS = [
+    { keywords: ['bleed', 'bleeding'], id: 'bleeding' },
+    { keywords: ['dizz', 'dizziness', 'dizzy'], id: 'dizziness' },
+    { keywords: ['headache', 'head ache', 'head pain'], id: 'headache' },
+    { keywords: ['swell', 'swelling', 'swollen', 'edema'], id: 'swelling' },
+    { keywords: ['tired', 'tiredness', 'fatigue', 'exhausted', 'weak', 'weakness'], id: 'fatigue' },
+    { keywords: ['nausea', 'nauseous', 'sick', 'queasy'], id: 'nausea' },
+    { keywords: ['vomit', 'vomiting', 'throwing up', 'puke'], id: 'vomiting' },
+    { keywords: ['abdominal pain', 'stomach pain', 'tummy pain', 'cramp', 'cramping', 'belly pain'], id: 'abdominal_pain' },
+    { keywords: ['fetal movement', 'baby not moving', 'baby movement', 'reduced movement', 'less movement', 'not kicking'], id: 'reduced_fetal_movement' },
+    { keywords: ['blur', 'blurred', 'blurry', 'vision problem', 'can\'t see', 'cannot see'], id: 'blurred_vision' },
+    { keywords: ['chest pain', 'chest hurt', 'heart pain'], id: 'chest_pain' },
+    { keywords: ['breath', 'breathing', 'breathless', 'shortness of breath', 'can\'t breathe'], id: 'shortness_of_breath' },
+    { keywords: ['fever', 'temperature', 'hot', 'chills'], id: 'fever' },
+  ];
+
   // Voice Input
-  const startVoiceInput = () => {
+  const startVoiceInput = async () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Voice input is not supported in your browser. Please use Chrome.');
+      setError('Voice input is not supported in your browser. Please use Google Chrome.');
       return;
     }
+
+    // Request microphone permission explicitly first
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (micErr) {
+      console.error('Microphone permission denied:', micErr);
+      setError('🎤 Microphone access denied. Please allow microphone permission in your browser and try again.');
+      return;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'en-IN';
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => setIsListening(true);
+    recognition.onstart = () => {
+      console.log('Speech recognition started');
+      setIsListening(true);
+      setError('');
+    };
+
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results).map(r => r[0].transcript).join('');
       setVoiceText(transcript);
-      // Auto-detect symptoms from voice
-      const lower = transcript.toLowerCase();
+
+      // Only process final results to avoid duplicates
+      const isFinal = event.results[event.results.length - 1].isFinal;
+
+      const lower = transcript.toLowerCase().trim();
       const detected = [];
-      if (lower.includes('bleed')) detected.push('bleeding');
-      if (lower.includes('dizz')) detected.push('dizziness');
-      if (lower.includes('head')) detected.push('headache');
-      if (lower.includes('swell')) detected.push('swelling');
-      if (lower.includes('tired') || lower.includes('fatigue')) detected.push('fatigue');
-      if (lower.includes('nausea') || lower.includes('sick')) detected.push('nausea');
-      if (lower.includes('vomit')) detected.push('vomiting');
-      if (lower.includes('pain') || lower.includes('cramp')) detected.push('abdominal_pain');
-      if (lower.includes('vision') || lower.includes('blur')) detected.push('blurred_vision');
-      if (lower.includes('breath')) detected.push('shortness_of_breath');
-      if (lower.includes('fever')) detected.push('fever');
-      if (lower.includes('chest')) detected.push('chest_pain');
-      if (detected.length > 0) {
-        setFormData(prev => ({ ...prev, symptoms: [...new Set([...prev.symptoms.filter(s => s !== 'none'), ...detected])], voiceSymptomText: transcript }));
+      let remainingText = lower;
+
+      // Match known symptoms via keywords
+      SYMPTOM_KEYWORDS.forEach(({ keywords, id }) => {
+        for (const keyword of keywords) {
+          if (lower.includes(keyword)) {
+            detected.push(id);
+            // Remove matched keyword from remaining text
+            remainingText = remainingText.replace(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), ' ');
+            break;
+          }
+        }
+      });
+
+      // Clean up remaining text — extract custom/unrecognized symptoms
+      // Remove common filler words
+      const fillerWords = ['i', 'am', 'have', 'having', 'feel', 'feeling', 'got', 'get', 'getting', 'some', 'a', 'an', 'the', 'and', 'also', 'with', 'my', 'me', 'is', 'are', 'was', 'been', 'lot', 'of', 'very', 'much', 'too', 'like', 'it', 'there', 'in', 'on', 'since', 'from', 'for', 'to', 'really', 'experiencing', 'suffering', 'symptoms', 'symptom'];
+      let customParts = remainingText
+        .split(/[,;.]+|\band\b/)
+        .map(part => part.trim())
+        .map(part => {
+          return part.split(/\s+/).filter(word => !fillerWords.includes(word.toLowerCase())).join(' ').trim();
+        })
+        .filter(part => part.length > 1);
+
+      // Deduplicate custom symptoms
+      customParts = [...new Set(customParts)];
+
+      // Update form data with detected and custom symptoms
+      setFormData(prev => {
+        const newSymptoms = [...new Set([...prev.symptoms.filter(s => s !== 'none'), ...detected])];
+        const existingCustom = isFinal ? [] : prev.customSymptoms;
+        const newCustom = [...new Set([...existingCustom, ...customParts])];
+        return {
+          ...prev,
+          symptoms: newSymptoms,
+          customSymptoms: newCustom,
+          voiceSymptomText: transcript
+        };
+      });
+    };
+
+    recognition.onend = () => {
+      console.log('Speech recognition ended');
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      switch (event.error) {
+        case 'not-allowed':
+          setError('🎤 Microphone access denied. Please allow microphone permission and try again.');
+          break;
+        case 'no-speech':
+          setError('🔇 No speech detected. Please try speaking again.');
+          break;
+        case 'network':
+          setError('🌐 Network error. Please check your internet connection.');
+          break;
+        case 'audio-capture':
+          setError('🎤 No microphone found. Please connect a microphone and try again.');
+          break;
+        default:
+          setError(`⚠️ Voice input error: ${event.error}. Please try again.`);
       }
     };
-    recognition.onend = () => setIsListening(false);
-    recognition.onerror = () => setIsListening(false);
+
     recognitionRef.current = recognition;
-    recognition.start();
+    try {
+      recognition.start();
+      console.log('Speech recognition start() called successfully');
+    } catch (startErr) {
+      console.error('Failed to start speech recognition:', startErr);
+      setError(`⚠️ Could not start voice input: ${startErr.message}`);
+      setIsListening(false);
+    }
   };
 
   const stopVoiceInput = () => {
     recognitionRef.current?.stop();
     setIsListening(false);
+  };
+
+  const removeCustomSymptom = (symptomToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      customSymptoms: prev.customSymptoms.filter(s => s !== symptomToRemove)
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -138,6 +239,7 @@ const HealthDataForm = () => {
         previousComplications: formData.previousComplications,
         previousComplicationDetails: formData.previousComplicationDetails,
         symptoms: formData.symptoms,
+        customSymptoms: formData.customSymptoms,
         voiceSymptomText: formData.voiceSymptomText,
         dietType: formData.dietType,
         ironSupplements: formData.ironSupplements,
@@ -366,6 +468,19 @@ const HealthDataForm = () => {
                       <p>Symptoms detected and auto-selected below ✓</p>
                     </div>
                   )}
+                  {formData.customSymptoms.length > 0 && (
+                    <div className="custom-symptoms-section">
+                      <strong>🗣️ Voice-Detected Additional Symptoms:</strong>
+                      <div className="custom-symptoms-list">
+                        {formData.customSymptoms.map((cs, idx) => (
+                          <span key={idx} className="custom-symptom-tag">
+                            {cs}
+                            <button type="button" className="remove-custom-btn" onClick={() => removeCustomSymptom(cs)}>×</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="symptoms-grid">
@@ -417,13 +532,21 @@ const HealthDataForm = () => {
                     </div>
                   </div>
                   <div className="review-section full-width">
-                    <h3>Symptoms ({formData.symptoms.length})</h3>
+                    <h3>Symptoms ({formData.symptoms.length + formData.customSymptoms.length})</h3>
                     <div className="review-symptoms">
                       {formData.symptoms.length > 0 ? formData.symptoms.map(s => (
                         <span key={s} className="review-symptom-tag">
                           {SYMPTOMS.find(sym => sym.id === s)?.icon} {SYMPTOMS.find(sym => sym.id === s)?.label || s}
                         </span>
-                      )) : <span className="no-symptoms">No symptoms selected</span>}
+                      )) : null}
+                      {formData.customSymptoms.length > 0 ? formData.customSymptoms.map((cs, idx) => (
+                        <span key={`custom-${idx}`} className="review-symptom-tag custom-review-tag">
+                          🗣️ {cs}
+                        </span>
+                      )) : null}
+                      {formData.symptoms.length === 0 && formData.customSymptoms.length === 0 && (
+                        <span className="no-symptoms">No symptoms selected</span>
+                      )}
                     </div>
                   </div>
                 </div>
