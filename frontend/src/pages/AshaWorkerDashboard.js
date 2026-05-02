@@ -261,27 +261,7 @@ const AshaWorkerDashboard = () => {
             <div className="header-date">
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
-            <button 
-              onClick={() => startAlarm()} 
-              style={{
-                background: '#fef2f2',
-                color: '#dc2626',
-                border: '1px solid #fca5a5',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.transform = 'none'; }}
-            >
-              🔊 Enable Sound
-            </button>
+            
           </div>
         </div>
 
