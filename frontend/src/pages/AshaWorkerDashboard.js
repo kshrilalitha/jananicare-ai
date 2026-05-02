@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAshaDashboard, acknowledgeAlert } from '../services/dataService';
 import Navbar from '../components/Navbar';
 import './AshaWorkerDashboard.css';
 import { io } from "socket.io-client";
-import { startAlarm,stopAlarm } from "../services/alarm";
+import { startAlarm, stopAlarm, initAudio } from "../services/alarm";
 
 
+
+const HOSPITAL_CACHE_KEY = 'jananicare_nearby_hospitals';
+const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 
 const AshaWorkerDashboard = () => {
   const { user } = useAuth();
@@ -18,8 +21,27 @@ const AshaWorkerDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('patients');
 
+  // Hospital state
+  const [hospitals, setHospitals] = useState([]);
+  const [hospitalsLoading, setHospitalsLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [hospitalsFetched, setHospitalsFetched] = useState(false);
+  const [isFromCache, setIsFromCache] = useState(false);
+  const [lastCacheTime, setLastCacheTime] = useState(null);
+
   useEffect(() => {
     fetchDashboard();
+
+    // Initialize audio on first click anywhere on the dashboard
+    const unlockAudio = () => {
+      initAudio();
+      document.removeEventListener('click', unlockAudio);
+    };
+    document.addEventListener('click', unlockAudio);
+
+    return () => {
+      document.removeEventListener('click', unlockAudio);
+    };
   }, []);
 
   useEffect(() => {
@@ -56,23 +78,6 @@ const AshaWorkerDashboard = () => {
   return () => socket.disconnect();
 }, []);
 
-  useEffect(() => {
-  const enableAudio = () => {
-    const tempAudio = new Audio("/alarm.mp3");
-
-    tempAudio.play()
-      .then(() => {
-        tempAudio.pause();
-        tempAudio.currentTime = 0;
-        console.log("✅ Audio unlocked");
-      })
-      .catch(() => {});
-
-    document.removeEventListener("click", enableAudio);
-  };
-
-  document.addEventListener("click", enableAudio);
-}, []);
 
   const fetchDashboard = async () => {
     try {
@@ -98,6 +103,133 @@ const AshaWorkerDashboard = () => {
     console.error('Acknowledge error:', err);
   }
 };
+
+  // ── Haversine distance (km) ──
+  const calcDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // ── Load cached hospitals ──
+  const loadCachedHospitals = useCallback(() => {
+    try {
+      const cached = localStorage.getItem(HOSPITAL_CACHE_KEY);
+      if (cached) {
+        const { hospitals: cachedList, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_EXPIRY_MS) {
+          setHospitals(cachedList);
+          setIsFromCache(true);
+          setLastCacheTime(new Date(timestamp));
+          setHospitalsFetched(true);
+          return true;
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+    return false;
+  }, []);
+
+  // ── Fetch hospitals from Overpass API ──
+  const fetchNearbyHospitals = useCallback(async (lat, lng) => {
+    setHospitalsLoading(true);
+    setLocationError(null);
+    setIsFromCache(false);
+    try {
+      const query = `[out:json][timeout:15];(node["amenity"="hospital"](around:25000,${lat},${lng});node["amenity"="clinic"](around:25000,${lat},${lng});node["amenity"="doctors"](around:25000,${lat},${lng});way["amenity"="hospital"](around:25000,${lat},${lng});node["healthcare:speciality"~"maternity|gynaecology|obstetrics"](around:25000,${lat},${lng}););out center body;`;
+      const resp = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
+      if (!resp.ok) throw new Error('API request failed');
+      const json = await resp.json();
+
+      // Maternity-related keywords (English + Indian terms)
+      const maternityKeywords = ['maternity', 'maternal', 'nursing home', 'women', 'woman', 'gynec', 'obstet', 'pregnan', 'janani', 'prasuti', 'mahila', 'stri', 'lady', 'mother', 'child', 'phc', 'primary health', 'health cent', 'sub cent', 'anganwadi', 'delivery', 'neonatal', 'pediatr', 'paediatr'];
+
+      const results = (json.elements || []).map(el => {
+        const elLat = el.lat || el.center?.lat;
+        const elLon = el.lon || el.center?.lon;
+        const dist = elLat && elLon ? calcDistance(lat, lng, elLat, elLon) : null;
+        const amenity = el.tags?.amenity || 'hospital';
+        const name = (el.tags?.name || el.tags?.['name:en'] || '').toLowerCase();
+        const speciality = (el.tags?.['healthcare:speciality'] || '').toLowerCase();
+
+        // Check if maternity-related
+        const isMaternityByName = maternityKeywords.some(kw => name.includes(kw));
+        const isMaternityByTag = speciality.includes('maternity') || speciality.includes('gynaecology') || speciality.includes('obstetrics');
+        const isPHC = name.includes('phc') || name.includes('primary health') || name.includes('health cent') || name.includes('sub cent');
+
+        // Only include maternity-related facilities and PHCs
+        if (!isMaternityByName && !isMaternityByTag && !isPHC) return null;
+
+        let type = 'Hospital';
+        if (amenity === 'clinic') type = 'Clinic';
+        else if (amenity === 'doctors') type = 'PHC';
+        if (isPHC) type = 'PHC';
+        if (isMaternityByName || isMaternityByTag) type = name.includes('clinic') ? 'Maternity Clinic' : 'Maternity Hospital';
+        if (isPHC) type = 'PHC';
+
+        return {
+          id: el.id,
+          name: el.tags?.name || el.tags?.['name:en'] || 'Healthcare Facility',
+          type,
+          lat: elLat,
+          lon: elLon,
+          distance: dist,
+          address: [el.tags?.['addr:street'], el.tags?.['addr:city'], el.tags?.['addr:district']].filter(Boolean).join(', ') || '',
+          phone: el.tags?.phone || el.tags?.['contact:phone'] || '',
+          emergency: el.tags?.emergency === 'yes',
+          website: el.tags?.website || '',
+          openingHours: el.tags?.opening_hours || ''
+        };
+      }).filter(h => h && h.lat && h.lon).sort((a, b) => (a.distance || 999) - (b.distance || 999));
+
+      setHospitals(results);
+      setHospitalsFetched(true);
+
+      // Cache results
+      localStorage.setItem(HOSPITAL_CACHE_KEY, JSON.stringify({ hospitals: results, timestamp: Date.now() }));
+      setLastCacheTime(new Date());
+    } catch (err) {
+      console.error('Overpass API error:', err);
+      // Try cache fallback
+      if (!loadCachedHospitals()) {
+        setLocationError('fetch_failed');
+      }
+    } finally {
+      setHospitalsLoading(false);
+    }
+  }, [loadCachedHospitals]);
+
+  // ── Request geolocation ──
+  const requestLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setLocationError('unsupported');
+      return;
+    }
+    setHospitalsLoading(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        fetchNearbyHospitals(loc.lat, loc.lng);
+      },
+      (err) => {
+        console.error('Geolocation error:', err);
+        setHospitalsLoading(false);
+        if (!loadCachedHospitals()) {
+          setLocationError('denied');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
+    );
+  }, [fetchNearbyHospitals, loadCachedHospitals]);
+
+  // ── When hospital tab is selected ──
+  useEffect(() => {
+    if (activeTab === 'hospitals' && !hospitalsFetched && !hospitalsLoading) {
+      requestLocation();
+    }
+  }, [activeTab, hospitalsFetched, hospitalsLoading, requestLocation]);
 
   if (loading) {
     return (
@@ -125,8 +257,31 @@ const AshaWorkerDashboard = () => {
             <h1>ASHA Worker Dashboard 👩‍⚕️</h1>
             <p>Welcome back, {user?.name} · {user?.village || user?.assignedArea || 'Your Area'}</p>
           </div>
-          <div className="header-date">
-            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <div className="header-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+            <div className="header-date">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+            <button 
+              onClick={() => startAlarm()} 
+              style={{
+                background: '#fef2f2',
+                color: '#dc2626',
+                border: '1px solid #fca5a5',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.transform = 'none'; }}
+            >
+              🔊 Enable Sound
+            </button>
           </div>
         </div>
 
@@ -183,6 +338,9 @@ const AshaWorkerDashboard = () => {
           </button>
           <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveTab('alerts')}>
             🚨 Priority Alerts {pendingAlerts.length > 0 && <span className="alert-count">{pendingAlerts.length}</span>}
+          </button>
+          <button className={`tab-btn ${activeTab === 'hospitals' ? 'active' : ''}`} onClick={() => setActiveTab('hospitals')}>
+            🏥 Nearby Hospitals
           </button>
         </div>
 
@@ -247,10 +405,196 @@ const AshaWorkerDashboard = () => {
             )}
           </div>
         )}
+
+        {/* Hospitals Tab */}
+        {activeTab === 'hospitals' && (
+          <div className="hospitals-section fade-in">
+            {/* Header bar */}
+            <div className="hospitals-header">
+              <div className="hospitals-header-info">
+                <h2>🤰 Maternity Hospitals & PHCs</h2>
+                <span className="hospitals-radius-badge">📍 25 km radius</span>
+              </div>
+              <div className="hospitals-header-actions">
+                {isFromCache && lastCacheTime && (
+                  <span className="cache-indicator">📦 Cached · {lastCacheTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                )}
+                <button className="refresh-hospitals-btn" onClick={() => { setHospitalsFetched(false); requestLocation(); }} disabled={hospitalsLoading}>
+                  🔄 {hospitalsLoading ? 'Searching...' : 'Refresh'}
+                </button>
+              </div>
+            </div>
+
+            {/* Loading */}
+            {hospitalsLoading && (
+              <div className="hospitals-loading">
+                <div className="hospital-skeleton-grid">
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="hospital-skeleton-card">
+                      <div className="skeleton-line skeleton-title"></div>
+                      <div className="skeleton-line skeleton-short"></div>
+                      <div className="skeleton-line skeleton-medium"></div>
+                    </div>
+                  ))}
+                </div>
+                <p className="loading-text">📍 Finding nearby hospitals...</p>
+              </div>
+            )}
+
+            {/* Location Error / Fallback */}
+            {!hospitalsLoading && locationError && (
+              <div className="location-fallback">
+                <div className="location-error-card">
+                  <span className="location-error-icon">{locationError === 'denied' ? '📍' : '⚠️'}</span>
+                  <h3>{locationError === 'denied' ? 'Location Access Needed' : 'Unable to Find Hospitals'}</h3>
+                  <p>{locationError === 'denied'
+                    ? 'Allow location access to find hospitals, clinics, and PHCs near you.'
+                    : 'Could not connect to the hospital database. Please check your internet connection.'}</p>
+                  <button className="retry-location-btn" onClick={() => { setLocationError(null); requestLocation(); }}>
+                    📍 Try Again
+                  </button>
+                </div>
+
+                {/* Emergency Helplines Fallback */}
+                <div className="emergency-helplines">
+                  <h3>🚑 Emergency Helplines</h3>
+                  <div className="helpline-grid">
+                    <a href="tel:108" className="helpline-card helpline-emergency">
+                      <div className="helpline-icon">🚑</div>
+                      <div>
+                        <div className="helpline-name">National Ambulance</div>
+                        <div className="helpline-number">108</div>
+                      </div>
+                    </a>
+                    <a href="tel:102" className="helpline-card helpline-maternal">
+                      <div className="helpline-icon">🤰</div>
+                      <div>
+                        <div className="helpline-name">Janani Express (Maternal)</div>
+                        <div className="helpline-number">102</div>
+                      </div>
+                    </a>
+                    <a href="tel:181" className="helpline-card helpline-women">
+                      <div className="helpline-icon">👩</div>
+                      <div>
+                        <div className="helpline-name">Women Helpline</div>
+                        <div className="helpline-number">181</div>
+                      </div>
+                    </a>
+                    <a href="tel:112" className="helpline-card helpline-general">
+                      <div className="helpline-icon">📞</div>
+                      <div>
+                        <div className="helpline-name">Emergency Services</div>
+                        <div className="helpline-number">112</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Hospital Results */}
+            {!hospitalsLoading && !locationError && hospitalsFetched && (
+              <>
+                {hospitals.length === 0 ? (
+                  <div className="empty-state">
+                    <span>🏥</span>
+                    <p>No hospitals found within 25 km</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="hospitals-count">{hospitals.length} healthcare facilities found</p>
+                    <div className="hospitals-grid">
+                      {hospitals.map((hospital, i) => (
+                        <HospitalCard key={hospital.id || i} hospital={hospital} />
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Always show emergency helplines at bottom */}
+                <div className="emergency-helplines emergency-helplines-bottom">
+                  <h3>🚑 Emergency Helplines</h3>
+                  <div className="helpline-grid">
+                    <a href="tel:108" className="helpline-card helpline-emergency">
+                      <div className="helpline-icon">🚑</div>
+                      <div>
+                        <div className="helpline-name">National Ambulance</div>
+                        <div className="helpline-number">108</div>
+                      </div>
+                    </a>
+                    <a href="tel:102" className="helpline-card helpline-maternal">
+                      <div className="helpline-icon">🤰</div>
+                      <div>
+                        <div className="helpline-name">Janani Express</div>
+                        <div className="helpline-number">102</div>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+// ══════════════════════════════════════════════════════════
+// HOSPITAL CARD
+// ══════════════════════════════════════════════════════════
+
+const HospitalCard = ({ hospital }) => {
+  const typeConfig = {
+    'Maternity Hospital': { bg: '#fdf2f8', border: '#f9a8d4', color: '#be185d', icon: '🤰' },
+    'Maternity Clinic': { bg: '#fdf2f8', border: '#f9a8d4', color: '#be185d', icon: '🤰' },
+    Hospital: { bg: '#eff6ff', border: '#93c5fd', color: '#1d4ed8', icon: '🏥' },
+    Clinic: { bg: '#f0fdf4', border: '#86efac', color: '#16a34a', icon: '🩺' },
+    PHC: { bg: '#fef3c7', border: '#fcd34d', color: '#b45309', icon: '🏛️' }
+  };
+  const config = typeConfig[hospital.type] || typeConfig.Hospital;
+
+  const directionsUrl = hospital.lat && hospital.lon
+    ? `https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lon}`
+    : '#';
+
+  return (
+    <div className="hospital-card" style={{ borderColor: config.border }}>
+      <div className="hospital-card-header">
+        <div className="hospital-type-badge" style={{ background: config.bg, color: config.color, borderColor: config.border }}>
+          {config.icon} {hospital.type}
+        </div>
+        {hospital.emergency && <span className="hospital-emergency-tag">🚨 24/7</span>}
+        {hospital.distance != null && (
+          <span className="hospital-distance-badge">
+            📍 {hospital.distance < 1 ? `${(hospital.distance * 1000).toFixed(0)} m` : `${hospital.distance.toFixed(1)} km`}
+          </span>
+        )}
+      </div>
+
+      <h3 className="hospital-name">{hospital.name}</h3>
+
+      {hospital.address && <p className="hospital-address">📍 {hospital.address}</p>}
+
+      {hospital.openingHours && <p className="hospital-hours">🕐 {hospital.openingHours}</p>}
+
+      <div className="hospital-card-actions">
+        {hospital.phone && (
+          <a href={`tel:${hospital.phone}`} className="hospital-call-btn" onClick={e => e.stopPropagation()}>
+            📞 Call
+          </a>
+        )}
+        <a href={directionsUrl} target="_blank" rel="noopener noreferrer" className="hospital-directions-btn">
+          🗺️ Get Directions
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// ══════════════════════════════════════════════════════════
+// PATIENT CARD (unchanged)
+// ══════════════════════════════════════════════════════════
 
 const PatientCard = ({ patient, onView }) => {
   const riskColors = { high: '#dc2626', medium: '#d97706', low: '#16a34a', unknown: '#64748b' };
@@ -314,6 +658,10 @@ const PatientCard = ({ patient, onView }) => {
     </div>
   );
 };
+
+// ══════════════════════════════════════════════════════════
+// ALERT CARD (unchanged)
+// ══════════════════════════════════════════════════════════
 
 const AlertCard = ({ alert, onAcknowledge }) => {
   const severityColors = { critical: '#dc2626', high: '#d97706', medium: '#2563eb', low: '#16a34a' };

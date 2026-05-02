@@ -78,6 +78,18 @@ export const translations = {
     normalVisit: 'Normal Visit', followUpNeeded: 'Follow-up Needed',
     referredDoctor: 'Referred to Doctor', emergencyReferral: 'Emergency Referral',
     saving: 'Saving...', logVisitBtn: 'Log Visit', callPatient: 'Call Patient',
+    // Nearby Hospitals
+    nearbyHospitals: 'Nearby Hospitals', hospital: 'Hospital', clinic: 'Clinic', phc: 'PHC',
+    getDirections: 'Get Directions', distance: 'Distance', kmAway: 'km away',
+    loadingHospitals: 'Finding nearby hospitals...', locationPermission: 'Enable Location Access',
+    locationPermissionDesc: 'Allow location access to find hospitals, clinics, and PHCs near you.',
+    noHospitalsFound: 'No hospitals found within 25 km',
+    enableLocation: 'Please enable location services to find nearby hospitals.',
+    emergencyHelplines: 'Emergency Helplines', cachedResults: 'Showing cached results (offline)',
+    locationDenied: 'Location access denied. Showing emergency contacts instead.',
+    refreshHospitals: 'Refresh', lastUpdated: 'Last updated',
+    hospitalTypes: 'Hospitals, Clinics & PHCs', searchRadius: '25 km radius',
+    nationalAmbulanceNum: '108', districtHospital: 'District Hospital',
     // Language
     language: 'Language', english: 'English', kannada: 'ಕನ್ನಡ'
   },
@@ -160,6 +172,18 @@ export const translations = {
     normalVisit: 'ಸಾಮಾನ್ಯ ಭೇಟಿ', followUpNeeded: 'ಅನುಸರಣೆ ಅಗತ್ಯ',
     referredDoctor: 'ವೈದ್ಯರಿಗೆ ಉಲ್ಲೇಖಿಸಲಾಗಿದೆ', emergencyReferral: 'ತುರ್ತು ಉಲ್ಲೇಖ',
     saving: 'ಉಳಿಸಲಾಗುತ್ತಿದೆ...', logVisitBtn: 'ಭೇಟಿ ದಾಖಲಿಸಿ', callPatient: 'ರೋಗಿಗೆ ಕರೆ ಮಾಡಿ',
+    // Nearby Hospitals
+    nearbyHospitals: 'ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆಗಳು', hospital: 'ಆಸ್ಪತ್ರೆ', clinic: 'ಕ್ಲಿನಿಕ್', phc: 'ಪ್ರಾಥಮಿಕ ಆರೋಗ್ಯ ಕೇಂದ್ರ',
+    getDirections: 'ದಾರಿ ಪಡೆಯಿರಿ', distance: 'ದೂರ', kmAway: 'ಕಿ.ಮೀ ದೂರ',
+    loadingHospitals: 'ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆಗಳನ್ನು ಹುಡುಕಲಾಗುತ್ತಿದೆ...', locationPermission: 'ಸ್ಥಳ ಪ್ರವೇಶ ಸಕ್ರಿಯಗೊಳಿಸಿ',
+    locationPermissionDesc: 'ನಿಮ್ಮ ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆಗಳು, ಕ್ಲಿನಿಕ್‌ಗಳು ಮತ್ತು PHC ಗಳನ್ನು ಹುಡುಕಲು ಸ್ಥಳ ಪ್ರವೇಶವನ್ನು ಅನುಮತಿಸಿ.',
+    noHospitalsFound: '25 ಕಿ.ಮೀ ಒಳಗೆ ಯಾವುದೇ ಆಸ್ಪತ್ರೆಗಳು ಕಂಡುಬಂದಿಲ್ಲ',
+    enableLocation: 'ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆಗಳನ್ನು ಹುಡುಕಲು ಸ್ಥಳ ಸೇವೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.',
+    emergencyHelplines: 'ತುರ್ತು ಸಹಾಯವಾಣಿಗಳು', cachedResults: 'ಸಂಗ್ರಹಿಸಿದ ಫಲಿತಾಂಶಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ (ಆಫ್‌ಲೈನ್)',
+    locationDenied: 'ಸ್ಥಳ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ. ತುರ್ತು ಸಂಪರ್ಕಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',
+    refreshHospitals: 'ರಿಫ್ರೆಶ್', lastUpdated: 'ಕೊನೆಯ ನವೀಕರಣ',
+    hospitalTypes: 'ಆಸ್ಪತ್ರೆಗಳು, ಕ್ಲಿನಿಕ್‌ಗಳು ಮತ್ತು PHC ಗಳು', searchRadius: '25 ಕಿ.ಮೀ ವ್ಯಾಪ್ತಿ',
+    nationalAmbulanceNum: '108', districtHospital: 'ಜಿಲ್ಲಾ ಆಸ್ಪತ್ರೆ',
     // Language
     language: 'ಭಾಷೆ', english: 'English', kannada: 'ಕನ್ನಡ'
   }
