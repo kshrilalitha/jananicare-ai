@@ -6,10 +6,22 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const dotenv = require('dotenv');
 dotenv.config();
-console.log("API KEY:", process.env.FAST2SMS_API_KEY);
 
+// ── Configuration ─────────────────────────────────────
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const PORT = process.env.PORT || 5000;
+const JWT_SECRET = process.env.JWT_SECRET || (NODE_ENV === 'production' ? null : 'jananicare_dev_secret');
 const AI_API_URL = process.env.AI_API_URL || 'http://localhost:5001';
-const JWT_SECRET = process.env.JWT_SECRET || 'jananicare_secret_key_2024';
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
+if (NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error("❌ FATAL: JWT_SECRET is not set in production!");
+  process.exit(1);
+}
+if (NODE_ENV === 'production' && !process.env.MONGODB_URI) {
+  console.error("❌ FATAL: MONGODB_URI is not set in production!");
+  process.exit(1);
+}
 
 
 // ══════════════════════════════════════════════════════════
@@ -128,8 +140,14 @@ const VisitLog = mongoose.model('VisitLog', visitLogSchema);
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/jananicare';
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('🍃 MongoDB connected:', MONGODB_URI))
-  .catch(err => console.error('❌ MongoDB connection error:', err.message));
+  .then(() => {
+    const safeUri = MONGODB_URI.includes('@') ? 'MongoDB Atlas (Cloud)' : MONGODB_URI;
+    console.log('🍃 MongoDB connected:', safeUri);
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection error:', err.message);
+    if (NODE_ENV === 'production') process.exit(1);
+  });
 
 // ══════════════════════════════════════════════════════════
 // EXPRESS APP
@@ -152,7 +170,7 @@ io.on('connection', (socket) => {
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  origin: FRONTEND_URL || '*',
   credentials: true
 }));
 app.use(express.json());
@@ -248,7 +266,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     res.status(201).json({ token, user: userData });
   } catch (err) {
-    console.error('Register error:', err);
+    console.error('Register error:', NODE_ENV === 'production' ? err.message : err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -291,7 +309,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({ token, user: userData });
   } catch (err) {
-    console.error('Login error:', err);
+    console.error('Login error:', NODE_ENV === 'production' ? err.message : err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -648,12 +666,8 @@ function getHealthTips(riskLevel) {
 }
 
 // ── Start Server ───────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🍃 MongoDB: ${MONGODB_URI}`);
-  console.log(`🤖 AI API: ${AI_API_URL}`);
+  console.log(`🚀 JananiCare Server running on port ${PORT} [${NODE_ENV}]`);
 });
 
 
