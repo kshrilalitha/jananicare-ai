@@ -135,7 +135,7 @@ const AshaWorkerDashboard = () => {
   }, []);
 
   // ── Fetch hospitals from Overpass API ──
-  const fetchNearbyHospitals = useCallback(async (lat, lng) => {
+  const fetchNearbyHospitals = useCallback(async (lat, lng, targetId) => {
     setHospitalsLoading(true);
     setLocationError(null);
     setIsFromCache(false);
@@ -194,6 +194,70 @@ const AshaWorkerDashboard = () => {
         isFallback = true;
       }
       
+      // --- START: Hardcoded Mock Hospitals for Demo ("Not random") ---
+      const mockHospitals = [];
+      if (targetId === 'worker') {
+        mockHospitals.push({
+          id: 'mock-asha-1',
+          name: 'JananiCare District Maternity Hospital',
+          type: 'Maternity Hospital',
+          lat: lat + 0.005,
+          lon: lng + 0.005,
+          distance: 1.2,
+          address: 'Main Health Block, Near Panchayat',
+          phone: '102',
+          emergency: true,
+          website: '',
+          openingHours: '24/7',
+          isMaternity: true
+        });
+        mockHospitals.push({
+          id: 'mock-asha-2',
+          name: 'Arogya Women & Child Clinic',
+          type: 'Maternity Clinic',
+          lat: lat - 0.003,
+          lon: lng + 0.008,
+          distance: 3.5,
+          address: 'Taluk Road',
+          phone: '108',
+          emergency: true,
+          website: '',
+          openingHours: '24/7',
+          isMaternity: true
+        });
+      } else {
+        mockHospitals.push({
+          id: 'mock-patient-1',
+          name: 'Local Village PHC (Primary Health Centre)',
+          type: 'PHC',
+          lat: lat + 0.002,
+          lon: lng + 0.002,
+          distance: 0.8,
+          address: 'Village Center Road',
+          phone: '9876543210',
+          emergency: true,
+          website: '',
+          openingHours: '24/7',
+          isMaternity: true
+        });
+        mockHospitals.push({
+          id: 'mock-patient-2',
+          name: 'Sanjeevini Maternity Clinic',
+          type: 'Maternity Clinic',
+          lat: lat + 0.008,
+          lon: lng - 0.004,
+          distance: 2.1,
+          address: 'Market Street',
+          phone: '9988776655',
+          emergency: false,
+          website: '',
+          openingHours: '9:00 AM - 6:00 PM',
+          isMaternity: true
+        });
+      }
+      results = [...mockHospitals, ...results];
+      // --- END: Hardcoded Mock Hospitals ---
+
       results.sort((a, b) => (a.distance || 999) - (b.distance || 999));
 
       setHospitals(results);
@@ -241,7 +305,7 @@ const AshaWorkerDashboard = () => {
         if (resp.ok) {
           const data = await resp.json();
           if (data && data.length > 0) {
-            fetchNearbyHospitals(parseFloat(data[0].lat), parseFloat(data[0].lon));
+            fetchNearbyHospitals(parseFloat(data[0].lat), parseFloat(data[0].lon), targetId);
             return;
           }
         }
@@ -261,20 +325,18 @@ const AshaWorkerDashboard = () => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          fetchNearbyHospitals(loc.lat, loc.lng);
+          fetchNearbyHospitals(loc.lat, loc.lng, targetId);
         },
         (err) => {
           console.error('Geolocation error:', err);
-          setHospitalsLoading(false);
-          if (!loadCachedHospitals()) {
-            setLocationError('denied');
-          }
+          // Fallback to default coordinates so mock data is shown
+          fetchNearbyHospitals(12.9716, 77.5946, targetId);
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
       );
     } else {
-      setHospitalsLoading(false);
-      setLocationError('patient_not_found'); // Show error if patient geocoding failed
+      // Fallback to default coordinates so mock data is shown
+      fetchNearbyHospitals(12.9716, 77.5946, targetId);
     }
   }, [fetchNearbyHospitals, loadCachedHospitals, user, data, searchTargetId]);
 
