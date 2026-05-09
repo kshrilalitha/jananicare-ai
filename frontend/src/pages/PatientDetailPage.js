@@ -15,20 +15,26 @@ const PatientDetailPage = () => {
   const [savingVisit, setSavingVisit] = useState(false);
 
   useEffect(() => {
-    fetchPatient();
-  }, [id,fetchPatient]);
-
   const fetchPatient = async () => {
     try {
       const result = await getPatientDetail(id);
       setData(result);
     } catch (err) {
       console.error('Patient fetch error:', err);
-      setData({ mother: null, profile: null, predictions: [], alerts: [], healthRecords: [] });
+      setData({
+        mother: null,
+        profile: null,
+        predictions: [],
+        alerts: [],
+        healthRecords: []
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  fetchPatient();
+}, [id]);
 
   const handleLogVisit = async (e) => {
     e.preventDefault();
