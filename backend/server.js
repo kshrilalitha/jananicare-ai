@@ -175,7 +175,10 @@ io.on('connection', (socket) => {
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
-  origin: FRONTEND_URL || "http://localhost:3000",
+  origin: [
+    'http://localhost:3000',
+    'https://jananicare-ai.vercel.app'
+  ],
   credentials: true
 }));
 app.use(express.json());
