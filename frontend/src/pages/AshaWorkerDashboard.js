@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAshaDashboard, acknowledgeAlert } from '../services/dataService';
@@ -6,7 +6,6 @@ import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import './AshaWorkerDashboard.css';
 import { io } from "socket.io-client";
-import { startAlarm, stopAlarm, initAudio } from "../services/alarm";
 
 
 
@@ -17,6 +16,7 @@ const AshaWorkerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const audioRef = useRef(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -33,12 +33,17 @@ const AshaWorkerDashboard = () => {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [searchTargetId, setSearchTargetId] = useState('worker');
 
- const enableSound = async () => {
-  try {
-    // Attempt to silently unlock the global audio instance
-    await initAudio();
-
-    localStorage.setItem("soundEnabled", "true");
+  const enableSound = async () => {
+   try {
+     if (audioRef.current) {
+       audioRef.current.volume = 0;
+       await audioRef.current.play();
+       audioRef.current.pause();
+       audioRef.current.currentTime = 0;
+       audioRef.current.volume = 1;
+     }
+ 
+     localStorage.setItem("soundEnabled", "true");
 
     alert("🔊 Emergency alerts enabled successfully!");
   } catch (err) {
@@ -51,14 +56,25 @@ const AshaWorkerDashboard = () => {
     fetchDashboard();
 
     // Initialize audio on first click anywhere on the dashboard
-    const unlockAudio = () => {
-      initAudio();
+    const unlockAudio = async () => {
+      if (audioRef.current) {
+        try {
+          audioRef.current.volume = 0;
+          await audioRef.current.play();
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.volume = 1;
+        } catch (e) {}
+      }
       document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
     };
     document.addEventListener('click', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
 
     return () => {
       document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
     };
   }, []);
 
@@ -71,9 +87,9 @@ const AshaWorkerDashboard = () => {
   socket.on("sos-alert", (newAlert) => {
   console.log("SOS RECEIVED:", newAlert);
 
-  if (localStorage.getItem("soundEnabled")) {
-  startAlarm();
-}
+  if (localStorage.getItem("soundEnabled") && audioRef.current) {
+    audioRef.current.play().catch(e => console.log("Autoplay blocked:", e));
+  }
 
   setData(prevData => {
     if (!prevData) return prevData;
@@ -118,7 +134,10 @@ const AshaWorkerDashboard = () => {
 
   const handleAcknowledgeAlert = async (alertId) => {
   try {
-    stopAlarm();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
 
     await acknowledgeAlert(alertId);
 
@@ -700,6 +719,8 @@ const AshaWorkerDashboard = () => {
           </div>
         )}
       </div>
+      {/* Hidden audio element for persistent mobile playback */}
+      <audio ref={audioRef} src="/alarm.mp3" preload="auto" loop />
     </div>
   );
 };
@@ -833,6 +854,20 @@ const AlertCard = ({ alert, onAcknowledge }) => {
   const severityColors = { critical: '#dc2626', high: '#d97706', medium: '#2563eb', low: '#16a34a' };
   const severityBgs = { critical: '#fef2f2', high: '#fffbeb', medium: '#eff6ff', low: '#f0fdf4' };
 
+  let finalUrl = alert.location || '';
+  let lat, lng;
+  const match = finalUrl.match(/q=([\d.-]+),([\d.-]+)/) || finalUrl.match(/query=([\d.-]+),([\d.-]+)/);
+  if (match) {
+    lat = match[1];
+    lng = match[2];
+  } else if (alert.lat && alert.lng) {
+    lat = alert.lat;
+    lng = alert.lng;
+  }
+  if (lat && lng) {
+    finalUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+
   return (
     <div className="alert-card" style={{ background: severityBgs[alert.severity], borderColor: severityColors[alert.severity] + '40' }}>
       <div className="alert-card-header">
@@ -854,39 +889,11 @@ const AlertCard = ({ alert, onAcknowledge }) => {
                 <span>📍</span> {t('patientEmergencyLocation')}
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  let lat, lng;
-                  let url = alert.location || '';
-                  
-                  // Extract coordinates if available
-                  const match = url.match(/q=([\d.-]+),([\d.-]+)/) || url.match(/query=([\d.-]+),([\d.-]+)/);
-                  if (match) {
-                    lat = match[1];
-                    lng = match[2];
-                  } else if (alert.lat && alert.lng) {
-                    lat = alert.lat;
-                    lng = alert.lng;
-                  }
-                  
-                  // Use the official universal maps URL
-                  let finalUrl = url;
-                  if (lat && lng) {
-                    finalUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-                  }
-                  
-                  // On mobile, changing window.location triggers the native app intent reliably
-                  // On desktop, target=_blank is preferred
-                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                  if (isMobile) {
-                    window.location.href = finalUrl;
-                  } else {
-                    window.open(finalUrl, '_blank', 'noopener,noreferrer');
-                  }
-                }}
+              <a
+                href={finalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
                 style={{
                   background: "#2563eb",
                   color: "white",
@@ -902,13 +909,15 @@ const AlertCard = ({ alert, onAcknowledge }) => {
                   gap: "8px",
                   width: "100%",
                   boxShadow: "0 2px 4px rgba(37, 99, 235, 0.2)",
-                  transition: "background 0.2s"
+                  transition: "background 0.2s",
+                  textDecoration: "none",
+                  boxSizing: "border-box"
                 }}
                 onMouseOver={(e) => e.currentTarget.style.background = "#1d4ed8"}
                 onMouseOut={(e) => e.currentTarget.style.background = "#2563eb"}
               >
                 🗺️ {t('openInGoogleMaps')}
-              </button>
+              </a>
           </div>
         </div>
         <div className="alert-meta">
