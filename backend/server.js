@@ -165,8 +165,22 @@ const { Server } = require('socket.io');
 
 const server = http.createServer(app);
 
+// ── Allowed Origins ───────────────────────────────────
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://jananicare-ai.vercel.app'
+];
+// Allow additional origin from FRONTEND_URL env var
+if (FRONTEND_URL && !ALLOWED_ORIGINS.includes(FRONTEND_URL)) {
+  ALLOWED_ORIGINS.push(FRONTEND_URL);
+}
+
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: {
+    origin: ALLOWED_ORIGINS,
+    methods: ['GET', 'POST'],
+    credentials: false
+  }
 });
 
 io.on('connection', (socket) => {
@@ -175,8 +189,17 @@ io.on('connection', (socket) => {
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
-  origin: FRONTEND_URL || "http://localhost:3000",
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

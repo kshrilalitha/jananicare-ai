@@ -47,7 +47,10 @@ const AshaWorkerDashboard = () => {
   }, []);
 
   useEffect(() => {
-  const socket = io("http://localhost:5000");
+  // Derive socket server URL from API URL (remove the /api suffix)
+  const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const socketUrl = apiUrl.replace(/\/api\/?$/, '');
+  const socket = io(socketUrl);
 
   socket.on("sos-alert", (newAlert) => {
   console.log("SOS RECEIVED:", newAlert);

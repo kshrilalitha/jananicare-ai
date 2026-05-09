@@ -254,7 +254,8 @@ const HealthDataForm = () => {
       // Call AI prediction via backend proxy
       let predictionResult;
       try {
-        const response = await fetch('http://localhost:5000/api/predict', {
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+        const response = await fetch(`${apiUrl}/predict`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
