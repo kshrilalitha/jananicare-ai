@@ -19,9 +19,9 @@ const MotherDashboard = () => {
   const [sendingAlert, setSendingAlert] = useState(false);
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
-
+   fetchDashboard();
+}, [fetchDashboard]);
+  
   const fetchDashboard = async () => {
     try {
       const data = await getMotherDashboard(user.uid);
