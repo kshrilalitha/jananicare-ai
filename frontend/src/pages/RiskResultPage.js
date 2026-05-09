@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import './RiskResultPage.css';
 
@@ -25,7 +24,7 @@ const RiskResultPage = () => {
 
   if (!prediction) return null;
 
-  const { riskLevel, riskScore, confidence, riskFactors, recommendations, urgency, doctorConsultationRequired, consultationTimeframe } = prediction;
+  const { riskLevel, confidence, riskFactors, recommendations, urgency, doctorConsultationRequired, consultationTimeframe } = prediction;
 
   const riskConfig = {
     high: {
