@@ -31,23 +31,21 @@ const AshaWorkerDashboard = () => {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [searchTargetId, setSearchTargetId] = useState('worker');
 
-  const enableSound = async () => {
+ const enableSound = async () => {
   try {
-    const audio = new Audio("/alarm.mp3");
+    const testAudio = new Audio("/alarm.mp3");
 
-    audio.volume = 0;
+    await testAudio.play();
 
-    await audio.play();
-
-    audio.pause();
-    audio.currentTime = 0;
-    audio.volume = 1;
+    testAudio.pause();
+    testAudio.currentTime = 0;
 
     localStorage.setItem("soundEnabled", "true");
 
-    alert("Emergency alerts enabled ✅");
+    alert("🔊 Emergency alerts enabled successfully!");
   } catch (err) {
-    console.log(err);
+    console.log("Enable sound failed:", err);
+    alert("Browser blocked audio. Please allow sound permissions.");
   }
 };
 
@@ -403,8 +401,8 @@ const AshaWorkerDashboard = () => {
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
             <button 
-              onClick={() => {
-  enableSound();
+             onClick={async () => {
+  await enableSound();
   startAlarm();
 }}
               style={{
