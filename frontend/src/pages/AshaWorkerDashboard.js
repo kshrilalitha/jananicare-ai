@@ -33,38 +33,46 @@ const AshaWorkerDashboard = () => {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [searchTargetId, setSearchTargetId] = useState('worker');
 
-  const enableSound = async () => {
+  const enableSound = () => {
    try {
      if (audioRef.current) {
-       audioRef.current.volume = 0;
-       await audioRef.current.play();
-       audioRef.current.pause();
-       audioRef.current.currentTime = 0;
-       audioRef.current.volume = 1;
+       // Mute the audio instead of setting volume to 0 (some browsers ignore volume=0)
+       audioRef.current.muted = true;
+       const playPromise = audioRef.current.play();
+       
+       if (playPromise !== undefined) {
+         playPromise.then(() => {
+           audioRef.current.pause();
+           audioRef.current.currentTime = 0;
+           audioRef.current.muted = false; // unmute so the actual alarm works
+           console.log("Audio unlocked successfully");
+         }).catch(err => {
+           console.error("Audio unlock play failed:", err);
+         });
+       }
      }
- 
      localStorage.setItem("soundEnabled", "true");
-
-    alert("🔊 Emergency alerts enabled successfully!");
-  } catch (err) {
-    console.log("Enable sound failed:", err);
-    alert("Browser blocked audio. Please allow sound permissions.");
-  }
-};
+     alert("🔊 Emergency alerts enabled successfully!");
+   } catch (err) {
+     console.log("Enable sound failed:", err);
+   }
+ };
 
   useEffect(() => {
     fetchDashboard();
 
     // Initialize audio on first click anywhere on the dashboard
-    const unlockAudio = async () => {
+    const unlockAudio = () => {
       if (audioRef.current) {
-        try {
-          audioRef.current.volume = 0;
-          await audioRef.current.play();
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current.volume = 1;
-        } catch (e) {}
+        audioRef.current.muted = true;
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            audioRef.current.muted = false;
+          }).catch(e => {});
+        }
       }
       document.removeEventListener('click', unlockAudio);
       document.removeEventListener('touchstart', unlockAudio);
@@ -865,7 +873,8 @@ const AlertCard = ({ alert, onAcknowledge }) => {
     lng = alert.lng;
   }
   if (lat && lng) {
-    finalUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    // A more universal Google Maps URL scheme that triggers the app correctly on mobile
+    finalUrl = `https://maps.google.com/?q=${lat},${lng}`;
   }
 
   return (
@@ -893,7 +902,6 @@ const AlertCard = ({ alert, onAcknowledge }) => {
                 href={finalUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={e => e.stopPropagation()}
                 style={{
                   background: "#2563eb",
                   color: "white",
@@ -913,8 +921,6 @@ const AlertCard = ({ alert, onAcknowledge }) => {
                   textDecoration: "none",
                   boxSizing: "border-box"
                 }}
-                onMouseOver={(e) => e.currentTarget.style.background = "#1d4ed8"}
-                onMouseOut={(e) => e.currentTarget.style.background = "#2563eb"}
               >
                 🗺️ {t('openInGoogleMaps')}
               </a>
