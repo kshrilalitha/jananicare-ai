@@ -8,18 +8,30 @@ if (typeof window !== 'undefined') {
 }
 
 // Function to unlock audio context on first user interaction
-export const initAudio = () => {
-  if (isUnlocked || !audio) return;
+export const initAudio = async () => {
+  if (!audio) return false;
+  if (isUnlocked) return true;
   
-  // Play and immediately pause to unlock the audio context
-  audio.play().then(() => {
+  try {
+    // Mute the volume for silent unlocking
+    const originalVolume = audio.volume;
+    audio.volume = 0;
+    
+    // Play and immediately pause to unlock the audio context
+    await audio.play();
     audio.pause();
     audio.currentTime = 0;
+    
+    // Restore the volume for when the alarm actually rings
+    audio.volume = originalVolume;
+    
     isUnlocked = true;
     console.log("🔊 Audio unlocked successfully");
-  }).catch(err => {
+    return true;
+  } catch (err) {
     console.log("🔇 Audio unlock failed:", err);
-  });
+    throw err;
+  }
 };
 
 export const startAlarm = async () => {
@@ -40,9 +52,11 @@ export const startAlarm = async () => {
       }
 
       document.removeEventListener('click', unlockOnClick);
+      document.removeEventListener('touchstart', unlockOnClick);
     };
 
     document.addEventListener('click', unlockOnClick);
+    document.addEventListener('touchstart', unlockOnClick); // mobile support
   }
 };
 
