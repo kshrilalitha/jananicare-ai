@@ -276,7 +276,7 @@ const AshaWorkerDashboard = () => {
     } finally {
       setHospitalsLoading(false);
     }
-  }, [loadCachedHospitals]);
+  }, []);
 
   // ── Request geolocation ──
   const requestLocation = useCallback(async (targetId = searchTargetId) => {
