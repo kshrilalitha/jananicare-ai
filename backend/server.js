@@ -12,6 +12,11 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || (NODE_ENV === 'production' ? null : 'jananicare_dev_secret');
 const AI_API_URL = process.env.AI_API_URL || 'http://localhost:5001';
+
+if (NODE_ENV === 'production' && !process.env.AI_API_URL) {
+  console.error("❌ FATAL: AI_API_URL is not set!");
+  process.exit(1);
+}
 const FRONTEND_URL = process.env.FRONTEND_URL;
 
 if (NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -170,7 +175,7 @@ io.on('connection', (socket) => {
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
-  origin: FRONTEND_URL || '*',
+  origin: FRONTEND_URL || "http://localhost:3000",
   credentials: true
 }));
 app.use(express.json());
