@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAshaDashboard, acknowledgeAlert } from '../services/dataService';
+import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import './AshaWorkerDashboard.css';
 import { io } from "socket.io-client";
@@ -15,6 +16,7 @@ const CACHE_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 const AshaWorkerDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -33,12 +35,8 @@ const AshaWorkerDashboard = () => {
 
  const enableSound = async () => {
   try {
-    const testAudio = new Audio("/alarm.mp3");
-
-    await testAudio.play();
-
-    testAudio.pause();
-    testAudio.currentTime = 0;
+    // Attempt to silently unlock the global audio instance
+    await initAudio();
 
     localStorage.setItem("soundEnabled", "true");
 
@@ -93,7 +91,9 @@ const AshaWorkerDashboard = () => {
           motherId: {
             name: newAlert.name
           },
-          location: `https://maps.google.com/?q=${newAlert.lat},${newAlert.lng}`
+          lat: newAlert.lat,
+          lng: newAlert.lng,
+          location: `https://www.google.com/maps/search/?api=1&query=${newAlert.lat},${newAlert.lng}`
         },
         ...(prevData.pendingAlerts || [])
       ]
@@ -393,8 +393,8 @@ const AshaWorkerDashboard = () => {
         {/* Header */}
         <div className="asha-header fade-in">
           <div>
-            <h1>ASHA Worker Dashboard 👩‍⚕️</h1>
-            <p>Welcome back, {user?.name} · {user?.village || user?.assignedArea || 'Your Area'}</p>
+            <h1>{t('ashaDashboard')} 👩‍⚕️</h1>
+            <p>{t('welcomeBack2')}, {user?.name} · {user?.village || user?.assignedArea || 'Your Area'}</p>
           </div>
           <div className="header-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
             <div className="header-date">
@@ -419,7 +419,7 @@ const AshaWorkerDashboard = () => {
               onMouseOver={(e) => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseOut={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.transform = 'none'; }}
             >
-              🔊 Enable Sound
+              🔊 {t('enableSound')}
             </button>
           </div>
         </div>
@@ -430,42 +430,42 @@ const AshaWorkerDashboard = () => {
             <div className="stat-icon">👥</div>
             <div>
               <div className="stat-value">{stats.total || 0}</div>
-              <div className="stat-name">Total Patients</div>
+              <div className="stat-name">{t('totalPatients')}</div>
             </div>
           </div>
           <div className="stat-card stat-high">
             <div className="stat-icon">🔴</div>
             <div>
               <div className="stat-value">{stats.highRisk || 0}</div>
-              <div className="stat-name">High Risk</div>
+              <div className="stat-name">{t('highRisk')}</div>
             </div>
           </div>
           <div className="stat-card stat-medium">
             <div className="stat-icon">🟡</div>
             <div>
               <div className="stat-value">{stats.mediumRisk || 0}</div>
-              <div className="stat-name">Medium Risk</div>
+              <div className="stat-name">{t('mediumRisk')}</div>
             </div>
           </div>
           <div className="stat-card stat-low">
             <div className="stat-icon">🟢</div>
             <div>
               <div className="stat-value">{stats.lowRisk || 0}</div>
-              <div className="stat-name">Low Risk</div>
+              <div className="stat-name">{t('lowRisk')}</div>
             </div>
           </div>
           <div className="stat-card stat-alerts">
             <div className="stat-icon">🚨</div>
             <div>
               <div className="stat-value">{stats.pendingAlerts || 0}</div>
-              <div className="stat-name">Pending Alerts</div>
+              <div className="stat-name">{t('pendingAlerts')}</div>
             </div>
           </div>
           <div className="stat-card stat-critical">
             <div className="stat-icon">⚡</div>
             <div>
               <div className="stat-value">{stats.criticalAlerts || 0}</div>
-              <div className="stat-name">Critical Alerts</div>
+              <div className="stat-name">{t('criticalAlerts')}</div>
             </div>
           </div>
         </div>
@@ -473,13 +473,13 @@ const AshaWorkerDashboard = () => {
         {/* Tabs */}
         <div className="asha-tabs fade-in">
           <button className={`tab-btn ${activeTab === 'patients' ? 'active' : ''}`} onClick={() => setActiveTab('patients')}>
-            👥 Patient Monitoring ({patients.length})
+            👥 {t('patientMonitoring')} ({patients.length})
           </button>
           <button className={`tab-btn ${activeTab === 'alerts' ? 'active' : ''}`} onClick={() => setActiveTab('alerts')}>
-            🚨 Priority Alerts {pendingAlerts.length > 0 && <span className="alert-count">{pendingAlerts.length}</span>}
+            🚨 {t('priorityAlerts')} {pendingAlerts.length > 0 && <span className="alert-count">{pendingAlerts.length}</span>}
           </button>
           <button className={`tab-btn ${activeTab === 'hospitals' ? 'active' : ''}`} onClick={() => setActiveTab('hospitals')}>
-            🏥 Nearby Hospitals
+            🏥 {t('nearbyHospitals')}
           </button>
         </div>
 
@@ -492,7 +492,7 @@ const AshaWorkerDashboard = () => {
                 <span>🔍</span>
                 <input
                   type="text"
-                  placeholder="Search by name or village..."
+                  placeholder={t('searchPatients')}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   className="search-input"
@@ -505,7 +505,7 @@ const AshaWorkerDashboard = () => {
                     className={`filter-btn filter-${f} ${filter === f ? 'active' : ''}`}
                     onClick={() => setFilter(f)}
                   >
-                    {f === 'all' ? '📋 All' : f === 'high' ? '🔴 High Risk' : f === 'medium' ? '🟡 Medium' : '🟢 Low Risk'}
+                    {f === 'all' ? `📋 ${t('all')}` : f === 'high' ? `🔴 ${t('highRisk')}` : f === 'medium' ? `🟡 ${t('mediumRisk')}` : `🟢 ${t('lowRisk')}`}
                   </button>
                 ))}
               </div>
@@ -516,7 +516,7 @@ const AshaWorkerDashboard = () => {
               {filteredPatients.length === 0 ? (
                 <div className="empty-state">
                   <span>👥</span>
-                  <p>No patients found matching your criteria</p>
+                  <p>{t('noPatients')}</p>
                 </div>
               ) : (
                 filteredPatients.map((patient, i) => (
@@ -533,7 +533,7 @@ const AshaWorkerDashboard = () => {
             {pendingAlerts.length === 0 ? (
               <div className="empty-state">
                 <span>✅</span>
-                <p>No pending alerts — all patients are being monitored</p>
+                <p>{t('noPendingAlerts')}</p>
               </div>
             ) : (
               <div className="alerts-list">
@@ -551,11 +551,11 @@ const AshaWorkerDashboard = () => {
             {/* Header bar */}
             <div className="hospitals-header" style={{ flexWrap: 'wrap' }}>
               <div className="hospitals-header-info">
-                <h2>🤰 Maternity Hospitals & PHCs</h2>
+                <h2>🤰 {t('maternityHospitalsPHCs')}</h2>
                 <span className="hospitals-radius-badge">📍 10 km radius</span>
                 
                 <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>Search Near:</label>
+                  <label style={{ fontSize: '14px', color: '#64748b', fontWeight: '500' }}>{t('searchNear')}</label>
                   <select 
                     value={searchTargetId} 
                     onChange={(e) => {
@@ -565,8 +565,8 @@ const AshaWorkerDashboard = () => {
                     }}
                     style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: '#fff', outline: 'none', cursor: 'pointer', flex: 1, minWidth: '200px' }}
                   >
-                    <option value="worker">🙋‍♀️ My Location ({user?.village || 'Current'})</option>
-                    <optgroup label="My Patients">
+                    <option value="worker">🙋‍♀️ {t('myLocation')} ({user?.village || 'Current'})</option>
+                    <optgroup label={t('myPatients')}>
                       {(data?.patients || []).map(p => (
                         <option key={p.id || p._id} value={p.id || p._id}>👤 {p.name} ({p.village})</option>
                       ))}
@@ -579,7 +579,7 @@ const AshaWorkerDashboard = () => {
                   <span className="cache-indicator">📦 Cached · {lastCacheTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                 )}
                 <button className="refresh-hospitals-btn" onClick={() => { setHospitalsFetched(false); requestLocation(); }} disabled={hospitalsLoading}>
-                  🔄 {hospitalsLoading ? 'Searching...' : 'Refresh'}
+                  🔄 {hospitalsLoading ? 'Searching...' : t('refreshHospitals')}
                 </button>
               </div>
             </div>
@@ -761,6 +761,7 @@ const HospitalCard = ({ hospital }) => {
 // ══════════════════════════════════════════════════════════
 
 const PatientCard = ({ patient, onView }) => {
+  const { t } = useLanguage();
   const riskColors = { high: '#dc2626', medium: '#d97706', low: '#16a34a', unknown: '#64748b' };
   const riskBgs = { high: '#fef2f2', medium: '#fffbeb', low: '#f0fdf4', unknown: '#f8fafc' };
   const riskBorders = { high: '#fca5a5', medium: '#fcd34d', low: '#86efac', unknown: '#e2e8f0' };
@@ -782,25 +783,25 @@ const PatientCard = ({ patient, onView }) => {
         </div>
         <div className={`patient-risk-badge risk-badge-${risk}`}>
           {risk === 'high' ? '🔴' : risk === 'medium' ? '🟡' : risk === 'low' ? '🟢' : '⚪'}
-          {risk.toUpperCase()}
+          {risk === 'high' ? t('highRisk') : risk === 'medium' ? t('mediumRisk') : risk === 'low' ? t('lowRisk') : t('unknownRisk')}
         </div>
       </div>
 
       <div className="patient-details">
         <div className="patient-detail-item">
-          <span>Trimester</span>
+          <span>{t('trimester')}</span>
           <strong>{patient.currentTrimester ? `T${patient.currentTrimester}` : 'N/A'}</strong>
         </div>
         <div className="patient-detail-item">
-          <span>Risk Score</span>
+          <span>{t('riskScore')}</span>
           <strong style={{ color: riskColors[risk] }}>{patient.latestRiskScore ?? 'N/A'}</strong>
         </div>
         <div className="patient-detail-item">
-          <span>Urgency</span>
-          <strong style={{ textTransform: 'capitalize' }}>{patient.urgency || 'N/A'}</strong>
+          <span>{t('urgency')}</span>
+          <strong style={{ textTransform: 'capitalize' }}>{t(patient.urgency) || patient.urgency || 'N/A'}</strong>
         </div>
         <div className="patient-detail-item">
-          <span>Assessments</span>
+          <span>{t('assessments')}</span>
           <strong>{patient.totalPredictions || 0}</strong>
         </div>
       </div>
@@ -808,15 +809,15 @@ const PatientCard = ({ patient, onView }) => {
       {patient.phone && (
         <div className="patient-contact">
           <a href={`tel:${patient.phone}`} className="contact-call-btn" onClick={e => e.stopPropagation()}>
-            📞 Call
+            📞 {t('call')}
           </a>
-          <button className="contact-view-btn" onClick={onView}>View Details →</button>
+          <button className="contact-view-btn" onClick={onView}>{t('viewDetails')} →</button>
         </div>
       )}
 
       {risk === 'high' && (
         <div className="patient-priority-tag">
-          🚨 PRIORITY CASE — Immediate attention required
+          🚨 {t('priorityCase')}
         </div>
       )}
     </div>
@@ -828,6 +829,7 @@ const PatientCard = ({ patient, onView }) => {
 // ══════════════════════════════════════════════════════════
 
 const AlertCard = ({ alert, onAcknowledge }) => {
+  const { t } = useLanguage();
   const severityColors = { critical: '#dc2626', high: '#d97706', medium: '#2563eb', low: '#16a34a' };
   const severityBgs = { critical: '#fef2f2', high: '#fffbeb', medium: '#eff6ff', low: '#f0fdf4' };
 
@@ -838,32 +840,75 @@ const AlertCard = ({ alert, onAcknowledge }) => {
         <div className="alert-info">
           <h3>{alert.title}</h3>
           <p>{alert.message}</p>
-          <div style={{
-              marginTop: "10px",
-              padding: "10px",
+            <div style={{
+              marginTop: "12px",
+              padding: "12px",
               borderRadius: "10px",
-              background: "#f1f5f9",
-              border: "1px solid #e2e8f0"
+              background: "#eff6ff",
+              border: "1px solid #bfdbfe",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px"
             }}>
-  <div style={{ marginBottom: "6px", fontSize: "13px", color: "#64748b" }}>
-    📍 Patient Location
-  </div>
+              <div style={{ fontSize: "13px", color: "#1e3a8a", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>📍</span> {t('patientEmergencyLocation')}
+              </div>
 
-  <a
-    href={alert.location}
-    target="_blank"
-    rel="noopener noreferrer"
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      textDecoration: "none",
-      color: "#1e293b",
-      fontWeight: "500"
-    }}
-  >
-    Open in Google Maps →
-  </a>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  let lat, lng;
+                  let url = alert.location || '';
+                  
+                  // Extract coordinates if available
+                  const match = url.match(/q=([\d.-]+),([\d.-]+)/) || url.match(/query=([\d.-]+),([\d.-]+)/);
+                  if (match) {
+                    lat = match[1];
+                    lng = match[2];
+                  } else if (alert.lat && alert.lng) {
+                    lat = alert.lat;
+                    lng = alert.lng;
+                  }
+                  
+                  // Use the official universal maps URL
+                  let finalUrl = url;
+                  if (lat && lng) {
+                    finalUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+                  }
+                  
+                  // On mobile, changing window.location triggers the native app intent reliably
+                  // On desktop, target=_blank is preferred
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  if (isMobile) {
+                    window.location.href = finalUrl;
+                  } else {
+                    window.open(finalUrl, '_blank', 'noopener,noreferrer');
+                  }
+                }}
+                style={{
+                  background: "#2563eb",
+                  color: "white",
+                  border: "none",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  fontWeight: "600",
+                  fontSize: "14px",
+                  cursor: "pointer",
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "8px",
+                  width: "100%",
+                  boxShadow: "0 2px 4px rgba(37, 99, 235, 0.2)",
+                  transition: "background 0.2s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#1d4ed8"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#2563eb"}
+              >
+                🗺️ {t('openInGoogleMaps')}
+              </button>
           </div>
         </div>
         <div className="alert-meta">
@@ -882,7 +927,7 @@ const AlertCard = ({ alert, onAcknowledge }) => {
       )}
       {alert.status === 'pending' && (
         <button className="acknowledge-btn" onClick={onAcknowledge}>
-          ✓ Acknowledge Alert
+          ✓ {t('acknowledgeAlert')}
         </button>
       )}
     </div>
