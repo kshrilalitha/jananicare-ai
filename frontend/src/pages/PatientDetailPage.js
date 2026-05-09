@@ -16,7 +16,7 @@ const PatientDetailPage = () => {
 
   useEffect(() => {
     fetchPatient();
-  }, [id]);
+  }, [id,fetchPatient]);
 
   const fetchPatient = async () => {
     try {
