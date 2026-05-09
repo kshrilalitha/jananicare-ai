@@ -7,7 +7,6 @@ import './RiskResultPage.css';
 const RiskResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [animateScore, setAnimateScore] = useState(0);
   const prediction = location.state?.prediction;
 
