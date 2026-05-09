@@ -314,9 +314,7 @@ def batch_predict():
         return jsonify({'error': str(e)}), 500
 
 
-import os
-
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5001))
+    port = int(os.environ.get("PORT", 10000))
     print(f'JananiCare AI Prediction API starting on port {port}...')
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
