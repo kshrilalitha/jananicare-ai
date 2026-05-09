@@ -65,11 +65,13 @@ const motherProfileSchema = new mongoose.Schema({
   bloodGroup: { type: String, default: '' },
   nextCheckupDate: { type: Date, default: null },
   emergencyContact: { type: Object, default: null },
-  medicineReminders: { type: Array, default: [
-    { medicine: 'Iron + Folic Acid Tablet', time: '08:00 AM', frequency: 'Daily' },
-    { medicine: 'Calcium Supplement', time: '02:00 PM', frequency: 'Daily' },
-    { medicine: 'Vitamin D', time: '08:00 AM', frequency: 'Weekly' }
-  ]}
+  medicineReminders: {
+    type: Array, default: [
+      { medicine: 'Iron + Folic Acid Tablet', time: '08:00 AM', frequency: 'Daily' },
+      { medicine: 'Calcium Supplement', time: '02:00 PM', frequency: 'Daily' },
+      { medicine: 'Vitamin D', time: '08:00 AM', frequency: 'Weekly' }
+    ]
+  }
 }, { timestamps: true });
 
 const healthRecordSchema = new mongoose.Schema({
@@ -189,17 +191,8 @@ io.on('connection', (socket) => {
 
 // ── Middleware ─────────────────────────────────────────
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error(`CORS policy: Origin ${origin} not allowed`));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: FRONTEND_URL || "http://localhost:3000",
+  credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
