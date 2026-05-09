@@ -282,8 +282,6 @@ const HealthDataForm = () => {
     }
   };
 
-  const totalSteps = 4;
-
   return (
     <div className="form-page">
       <Navbar />
