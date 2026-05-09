@@ -276,7 +276,7 @@ const AshaWorkerDashboard = () => {
     } finally {
       setHospitalsLoading(false);
     }
-  }, []);
+  }, [loadCachedHospitals]);
 
   // ── Request geolocation ──
   const requestLocation = useCallback(async (targetId = searchTargetId) => {
@@ -338,7 +338,7 @@ const AshaWorkerDashboard = () => {
       // Fallback to default coordinates so mock data is shown
       fetchNearbyHospitals(12.9716, 77.5946, targetId);
     }
-  }, [fetchNearbyHospitals, loadCachedHospitals, user, data, searchTargetId]);
+  }, [fetchNearbyHospitals, user, data, searchTargetId]);
 
   // ── When hospital tab is selected ──
   useEffect(() => {
