@@ -53,7 +53,7 @@ const PatientDetailPage = () => {
 
   if (loading) return <div className="page-loading"><div className="spinner"></div><p>Loading patient details...</p></div>;
 
-  const { mother, profile, predictions = [], healthRecords = [], alerts = [] } = data || {};
+  const { mother, profile, predictions = [], alerts = [] } = data || {};
   const latestPrediction = predictions[0];
   const riskLevel = latestPrediction?.riskLevel || 'unknown';
 
