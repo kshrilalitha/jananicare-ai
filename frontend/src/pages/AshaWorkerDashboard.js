@@ -403,7 +403,7 @@ const AshaWorkerDashboard = () => {
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
             <button 
-              onClick={() => startAlarm()} 
+              onClick={enableSound}
               style={{
                 background: '#fef2f2',
                 color: '#dc2626',
