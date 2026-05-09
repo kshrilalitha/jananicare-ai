@@ -31,6 +31,26 @@ const AshaWorkerDashboard = () => {
   const [fallbackMode, setFallbackMode] = useState(false);
   const [searchTargetId, setSearchTargetId] = useState('worker');
 
+  const enableSound = async () => {
+  try {
+    const audio = new Audio("/alarm.mp3");
+
+    audio.volume = 0;
+
+    await audio.play();
+
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = 1;
+
+    localStorage.setItem("soundEnabled", "true");
+
+    alert("Emergency alerts enabled ✅");
+  } catch (err) {
+    console.log(err);
+  }
+};
+
   useEffect(() => {
     fetchDashboard();
 
@@ -55,7 +75,9 @@ const AshaWorkerDashboard = () => {
   socket.on("sos-alert", (newAlert) => {
   console.log("SOS RECEIVED:", newAlert);
 
+  if (localStorage.getItem("soundEnabled")) {
   startAlarm();
+}
 
   setData(prevData => {
     if (!prevData) return prevData;
