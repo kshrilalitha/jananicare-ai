@@ -254,7 +254,6 @@
 }
 
 /* Alerts */
-.alerts-section { }
 .alerts-list { display: flex; flex-direction: column; gap: 16px; }
 
 .alert-card {
@@ -445,7 +444,6 @@
 }
 
 /* Location Error Card */
-.location-fallback { }
 .location-error-card {
   text-align: center;
   background: linear-gradient(135deg, #fffbeb, #fef3c7);

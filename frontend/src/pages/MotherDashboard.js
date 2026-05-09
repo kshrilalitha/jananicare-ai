@@ -19,9 +19,6 @@ const MotherDashboard = () => {
   const [sendingAlert, setSendingAlert] = useState(false);
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
-
   const fetchDashboard = async () => {
     try {
       const data = await getMotherDashboard(user.uid);
@@ -33,6 +30,9 @@ const MotherDashboard = () => {
       setLoading(false);
     }
   };
+
+  fetchDashboard();
+}, [user]);
 
   const handleOneTapHelp = async () => {
   setSendingAlert(true);

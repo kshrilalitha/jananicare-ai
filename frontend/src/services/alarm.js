@@ -22,18 +22,28 @@ export const initAudio = () => {
   });
 };
 
-export const startAlarm = () => {
+export const startAlarm = async () => {
   if (!audio) return;
-  
-  audio.play().catch((err) => {
-    console.log("🔇 Autoplay blocked, waiting for user interaction. Click anywhere to enable sound.");
-    // Force an unlock attempt on the next click if it was blocked
-    const unlockOnClick = () => {
-      audio.play();
+
+  try {
+    await audio.play();
+    console.log("🚨 Alarm playing");
+  } catch (err) {
+    console.log("🔇 Autoplay blocked, waiting for user interaction.");
+
+    const unlockOnClick = async () => {
+      try {
+        await audio.play();
+        console.log("🚨 Alarm unlocked and playing");
+      } catch (e) {
+        console.log("Still blocked:", e);
+      }
+
       document.removeEventListener('click', unlockOnClick);
     };
+
     document.addEventListener('click', unlockOnClick);
-  });
+  }
 };
 
 export const stopAlarm = () => {

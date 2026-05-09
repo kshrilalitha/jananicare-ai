@@ -38,7 +38,6 @@
 .illustration-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
 .illustration-card p { font-size: 12px; opacity: 0.8; }
 
-.register-info { }
 .register-info h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
 .register-info p { font-size: 14px; opacity: 0.85; margin-bottom: 24px; }
 .register-benefits { display: flex; flex-direction: column; gap: 10px; }

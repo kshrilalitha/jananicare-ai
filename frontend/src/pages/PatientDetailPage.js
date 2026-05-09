@@ -15,20 +15,26 @@ const PatientDetailPage = () => {
   const [savingVisit, setSavingVisit] = useState(false);
 
   useEffect(() => {
-    fetchPatient();
-  }, [id]);
-
   const fetchPatient = async () => {
     try {
       const result = await getPatientDetail(id);
       setData(result);
     } catch (err) {
       console.error('Patient fetch error:', err);
-      setData({ mother: null, profile: null, predictions: [], alerts: [], healthRecords: [] });
+      setData({
+        mother: null,
+        profile: null,
+        predictions: [],
+        alerts: [],
+        healthRecords: []
+      });
     } finally {
       setLoading(false);
     }
   };
+
+  fetchPatient();
+}, [id]);
 
   const handleLogVisit = async (e) => {
     e.preventDefault();
@@ -47,7 +53,7 @@ const PatientDetailPage = () => {
 
   if (loading) return <div className="page-loading"><div className="spinner"></div><p>Loading patient details...</p></div>;
 
-  const { mother, profile, predictions = [], healthRecords = [], alerts = [] } = data || {};
+  const { mother, profile, predictions = [], alerts = [] } = data || {};
   const latestPrediction = predictions[0];
   const riskLevel = latestPrediction?.riskLevel || 'unknown';
 
