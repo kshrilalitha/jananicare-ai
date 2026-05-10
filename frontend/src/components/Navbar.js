@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
+import logo from '../logo.png';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -23,7 +24,7 @@ const Navbar = () => {
       <div className="navbar-inner">
         {/* Logo */}
         <div className="navbar-logo" onClick={() => navigate(user?.role === 'asha_worker' ? '/asha-dashboard' : '/dashboard')}>
-          <span className="nav-logo-icon">🌸</span>
+          <img src={logo} alt="JananiCare AI Logo" className="nav-logo-img" />
           <span className="nav-logo-text">JananiCare <span className="nav-ai">AI</span></span>
         </div>
 

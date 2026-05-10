@@ -27,7 +27,13 @@
   text-decoration: none;
   flex-shrink: 0;
 }
-.nav-logo-icon { font-size: 24px; }
+.nav-logo-img {
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 2px 6px rgba(224, 80, 128, 0.35));
+}
 .nav-logo-text {
   font-size: 18px;
   font-weight: 800;

@@ -27,7 +27,14 @@
   color: #1e293b;
 }
 
-.logo-icon { font-size: 28px; }
+.landing-logo-img {
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 2px 6px rgba(224, 80, 128, 0.35));
+  vertical-align: middle;
+}
 .logo-ai {
   background: linear-gradient(135deg, #2563eb, #10b981);
   -webkit-background-clip: text;

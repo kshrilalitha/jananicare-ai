@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import logo from '../logo.png';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -10,7 +11,7 @@ const LandingPage = () => {
       {/* Header */}
       <header className="landing-header">
         <div className="header-logo">
-          <span className="logo-icon">🌸</span>
+          <img src={logo} alt="JananiCare AI" className="landing-logo-img" />
           <span className="logo-text">JananiCare <span className="logo-ai">AI</span></span>
         </div>
         <div className="header-actions">
@@ -35,7 +36,7 @@ const LandingPage = () => {
         </p>
         <div className="hero-actions">
           <button className="btn-hero-primary" onClick={() => navigate('/register')}>
-            🌸 I'm a Pregnant Mother
+            🤱 I'm a Pregnant Mother
           </button>
           <button className="btn-hero-secondary" onClick={() => navigate('/register?role=asha_worker')}>
             👩‍⚕️ I'm an ASHA Worker
@@ -152,7 +153,7 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="landing-footer">
         <div className="footer-logo">
-          <span>🌸</span> JananiCare AI
+          <img src={logo} alt="JananiCare AI" className="landing-logo-img" /> JananiCare AI
         </div>
         <p>Predict Early. Protect Mothers. Save Lives.</p>
         <p className="footer-tagline">Built for India's Maternal Healthcare Revolution 🇮🇳</p>
