@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import './RiskResultPage.css';
 
 const RiskResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [animateScore, setAnimateScore] = useState(0);
   const prediction = location.state?.prediction;
 
@@ -29,23 +31,23 @@ const RiskResultPage = () => {
   const riskConfig = {
     high: {
       color: '#dc2626', bg: '#fef2f2', border: '#fca5a5',
-      icon: '🔴', label: 'HIGH RISK',
-      headline: 'Immediate Medical Attention Required',
-      subtext: 'Your health data indicates a high-risk pregnancy. Please seek medical help immediately.',
+      icon: '🔴', label: t('highRisk'),
+      headline: t('immediateMedicalAttention'),
+      subtext: t('highRiskSubtext'),
       gradient: 'linear-gradient(135deg, #dc2626, #b91c1c)'
     },
     medium: {
       color: '#d97706', bg: '#fffbeb', border: '#fcd34d',
-      icon: '🟡', label: 'MEDIUM RISK',
-      headline: 'Medical Consultation Recommended',
-      subtext: 'Your health data shows some concerning factors. Please schedule a doctor visit soon.',
+      icon: '🟡', label: t('mediumRisk'),
+      headline: t('medicalConsultationRecommended'),
+      subtext: t('mediumRiskSubtext'),
       gradient: 'linear-gradient(135deg, #d97706, #b45309)'
     },
     low: {
       color: '#16a34a', bg: '#f0fdf4', border: '#86efac',
-      icon: '🟢', label: 'LOW RISK',
-      headline: 'Pregnancy Appears Healthy',
-      subtext: 'Your health data looks good! Continue your regular antenatal care routine.',
+      icon: '🟢', label: t('lowRisk'),
+      headline: t('pregnancyAppearsHealthy'),
+      subtext: t('lowRiskSubtext'),
       gradient: 'linear-gradient(135deg, #16a34a, #15803d)'
     }
   };
@@ -84,7 +86,7 @@ const RiskResultPage = () => {
             <div className="score-text">
               <span className="score-number" style={{ color: config.color }}>{animateScore}</span>
               <span className="score-label">/ 100</span>
-              <span className="score-sub">Risk Score</span>
+              <span className="score-sub">{t('riskScore')}</span>
             </div>
           </div>
         </div>
@@ -94,12 +96,12 @@ const RiskResultPage = () => {
           <div className="urgency-banner fade-in">
             <span className="urgency-icon">🚨</span>
             <div>
-              <strong>EMERGENCY ACTION REQUIRED</strong>
-              <p>Go to the nearest Primary Health Centre or hospital immediately. Do not delay.</p>
+              <strong>{t('emergencyActionRequired')}</strong>
+              <p>{t('emergencyActionDesc')}</p>
             </div>
             <div className="urgency-actions">
-              <a href="tel:108" className="urgency-call-btn">📞 Call 108</a>
-              <a href="tel:112" className="urgency-call-btn">🚑 Call 112</a>
+              <a href="tel:108" className="urgency-call-btn">📞 {t('call108')}</a>
+              <a href="tel:112" className="urgency-call-btn">🚑 {t('call112')}</a>
             </div>
           </div>
         )}
@@ -110,29 +112,29 @@ const RiskResultPage = () => {
             <div className="consult-item">
               <span className="consult-icon">⏰</span>
               <div>
-                <strong>Consultation Timeframe</strong>
+                <strong>{t('consultationTimeframeLabel')}</strong>
                 <p>{consultationTimeframe}</p>
               </div>
             </div>
             <div className="consult-item">
               <span className="consult-icon">🏥</span>
               <div>
-                <strong>Doctor Visit Required</strong>
-                <p>{doctorConsultationRequired ? 'Yes — Please schedule immediately' : 'Routine checkup recommended'}</p>
+                <strong>{t('doctorVisitRequiredLabel')}</strong>
+                <p>{doctorConsultationRequired ? t('seekImmediate') : t('continueCheckups')}</p>
               </div>
             </div>
             <div className="consult-item">
               <span className="consult-icon">🎯</span>
               <div>
-                <strong>AI Confidence</strong>
-                <p>{Math.round((confidence || 0.87) * 100)}% prediction accuracy</p>
+                <strong>{t('aiConfidenceLabel')}</strong>
+                <p>{Math.round((confidence || 0.87) * 100)}% {t('predictionAccuracy')}</p>
               </div>
             </div>
             <div className="consult-item">
               <span className="consult-icon">⚡</span>
               <div>
-                <strong>Urgency Level</strong>
-                <p style={{ textTransform: 'capitalize', fontWeight: 700, color: config.color }}>{urgency}</p>
+                <strong>{t('urgencyLevelLabel')}</strong>
+                <p style={{ textTransform: 'capitalize', fontWeight: 700, color: config.color }}>{t(urgency) || urgency}</p>
               </div>
             </div>
           </div>
@@ -142,7 +144,7 @@ const RiskResultPage = () => {
           {/* Risk Factors */}
           {riskFactors && riskFactors.length > 0 && (
             <div className="result-card fade-in">
-              <h2>⚠️ Risk Factors Identified</h2>
+              <h2>⚠️ {t('riskFactorsIdentified')}</h2>
               <div className="risk-factors-list">
                 {riskFactors.map((rf, i) => (
                   <div key={i} className={`risk-factor-item rf-${rf.severity}`}>
@@ -160,7 +162,7 @@ const RiskResultPage = () => {
 
           {/* Recommendations */}
           <div className="result-card fade-in">
-            <h2>💡 AI Recommendations</h2>
+            <h2>💡 {t('aiRecommendations')}</h2>
             <div className="recommendations-list">
               {(recommendations || []).map((rec, i) => (
                 <div key={i} className="recommendation-item">
@@ -174,9 +176,9 @@ const RiskResultPage = () => {
 
         {/* Preventive Guidance */}
         <div className="preventive-card fade-in">
-          <h2>🛡️ Preventive Care Guidance</h2>
+          <h2>🛡️ {t('preventiveCareGuidance')}</h2>
           <div className="preventive-grid">
-            {getPreventiveGuidance(riskLevel).map((item, i) => (
+            {getPreventiveGuidance(riskLevel, t).map((item, i) => (
               <div key={i} className="preventive-item">
                 <span className="preventive-icon">{item.icon}</span>
                 <div>
@@ -191,13 +193,13 @@ const RiskResultPage = () => {
         {/* Emergency Contacts */}
         {riskLevel === 'high' && (
           <div className="emergency-card fade-in">
-            <h2>📞 Emergency Contacts</h2>
+            <h2>📞 {t('emergencyContacts')}</h2>
             <div className="emergency-contacts-grid">
               {[
-                { name: 'National Ambulance', number: '108', icon: '🚑' },
-                { name: 'Emergency Services', number: '112', icon: '🆘' },
-                { name: 'Women Helpline', number: '181', icon: '👩‍⚕️' },
-                { name: 'ASHA Worker', number: 'Contact via app', icon: '🏥' }
+                { name: t('nationalAmbulance'), number: '108', icon: '🚑' },
+                { name: t('emergencyServices'), number: '112', icon: '🆘' },
+                { name: t('womenHelpline'), number: '181', icon: '👩‍⚕️' },
+                { name: t('ashaWorker'), number: t('contactViaApp'), icon: '🏥' }
               ].map((c, i) => (
                 <div key={i} className="emergency-contact-item">
                   <span>{c.icon}</span>
@@ -205,8 +207,8 @@ const RiskResultPage = () => {
                     <strong>{c.name}</strong>
                     <span className="emergency-number">{c.number}</span>
                   </div>
-                  {c.number !== 'Contact via app' && (
-                    <a href={`tel:${c.number}`} className="call-now-btn">Call Now</a>
+                  {c.number !== t('contactViaApp') && (
+                    <a href={`tel:${c.number}`} className="call-now-btn">{t('callNow')}</a>
                   )}
                 </div>
               ))}
@@ -217,14 +219,14 @@ const RiskResultPage = () => {
         {/* Action Buttons */}
         <div className="result-actions fade-in">
           <button className="action-btn-secondary" onClick={() => navigate('/dashboard')}>
-            ← Back to Dashboard
+            ← {t('backToDashboard')}
           </button>
           <button className="action-btn-primary" onClick={() => navigate('/health-form')}>
-            📋 New Assessment
+            📋 {t('newAssessmentBtn')}
           </button>
           {riskLevel === 'high' && (
             <button className="action-btn-emergency" onClick={() => navigate('/dashboard')}>
-              🆘 Send Emergency Alert
+              🆘 {t('sendEmergencyAlertBtn')}
             </button>
           )}
         </div>
@@ -233,25 +235,25 @@ const RiskResultPage = () => {
   );
 };
 
-function getPreventiveGuidance(riskLevel) {
+function getPreventiveGuidance(riskLevel, t) {
   const guidance = {
     high: [
-      { icon: '🏥', title: 'Immediate Hospital Visit', desc: 'Do not delay — go to nearest PHC or hospital today' },
-      { icon: '📞', title: 'Contact ASHA Worker', desc: 'Inform your ASHA worker about your risk status immediately' },
-      { icon: '🚫', title: 'Avoid Physical Strain', desc: 'No heavy lifting, strenuous activity, or travel without medical clearance' },
-      { icon: '👥', title: 'Stay with Family', desc: 'Do not stay alone — have a family member with you at all times' }
+      { icon: '🏥', title: t('immediateHospitalVisit'), desc: t('immediateHospitalDesc') },
+      { icon: '📞', title: t('contactASHA'), desc: t('contactASHADesc') },
+      { icon: '🚫', title: t('avoidPhysicalStrain'), desc: t('avoidPhysicalStrainDesc') },
+      { icon: '👥', title: t('stayWithFamily'), desc: t('stayWithFamilyDesc') }
     ],
     medium: [
-      { icon: '📅', title: 'Schedule Doctor Visit', desc: 'Book an appointment within the next 2-3 days' },
-      { icon: '📊', title: 'Monitor Daily', desc: 'Check blood pressure and note any new symptoms daily' },
-      { icon: '💊', title: 'Take Supplements', desc: 'Ensure you take iron, folic acid, and calcium as prescribed' },
-      { icon: '😴', title: 'Rest Adequately', desc: 'Get 8-9 hours of sleep and avoid stress' }
+      { icon: '📅', title: t('scheduleDoctorVisitGuidance'), desc: t('scheduleDoctorVisitDesc') },
+      { icon: '📊', title: t('monitorDaily'), desc: t('monitorDailyDesc') },
+      { icon: '💊', title: t('takeSupplements'), desc: t('takeSupplementsDesc') },
+      { icon: '😴', title: t('restAdequately'), desc: t('restAdequatelyDesc') }
     ],
     low: [
-      { icon: '📅', title: 'Regular Checkups', desc: 'Continue antenatal visits every 4 weeks as scheduled' },
-      { icon: '🥗', title: 'Balanced Nutrition', desc: 'Eat iron-rich foods, fruits, vegetables, and whole grains' },
-      { icon: '🚶', title: 'Light Exercise', desc: 'Walk 20-30 minutes daily — great for circulation and mood' },
-      { icon: '💧', title: 'Stay Hydrated', desc: 'Drink 8-10 glasses of water daily' }
+      { icon: '📅', title: t('regularCheckups'), desc: t('regularCheckupsDesc') },
+      { icon: '🥗', title: t('balancedNutrition'), desc: t('balancedNutritionDesc') },
+      { icon: '🚶', title: t('lightExercise'), desc: t('lightExerciseDesc') },
+      { icon: '💧', title: t('stayHydrated'), desc: t('stayHydratedDesc') }
     ]
   };
   return guidance[riskLevel] || guidance.low;

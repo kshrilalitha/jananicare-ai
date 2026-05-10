@@ -2,29 +2,31 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { saveHealthRecord, savePrediction } from '../services/dataService';
+import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import './HealthDataForm.css';
-
-const SYMPTOMS = [
-  { id: 'fatigue', label: 'Fatigue / Tiredness', icon: '😴' },
-  { id: 'dizziness', label: 'Dizziness', icon: '💫' },
-  { id: 'swelling', label: 'Swelling (hands/feet/face)', icon: '🦶' },
-  { id: 'headache', label: 'Headache', icon: '🤕' },
-  { id: 'bleeding', label: 'Vaginal Bleeding', icon: '🩸' },
-  { id: 'nausea', label: 'Nausea', icon: '🤢' },
-  { id: 'vomiting', label: 'Vomiting', icon: '🤮' },
-  { id: 'abdominal_pain', label: 'Abdominal Pain', icon: '😣' },
-  { id: 'reduced_fetal_movement', label: 'Reduced Fetal Movement', icon: '👶' },
-  { id: 'blurred_vision', label: 'Blurred Vision', icon: '👁️' },
-  { id: 'chest_pain', label: 'Chest Pain', icon: '💔' },
-  { id: 'shortness_of_breath', label: 'Shortness of Breath', icon: '😮‍💨' },
-  { id: 'fever', label: 'Fever', icon: '🌡️' },
-  { id: 'none', label: 'No Symptoms', icon: '✅' }
-];
 
 const HealthDataForm = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
+
+  const SYMPTOMS = [
+    { id: 'fatigue', label: t('fatigue'), icon: '😴' },
+    { id: 'dizziness', label: t('dizziness'), icon: '💫' },
+    { id: 'swelling', label: t('swelling'), icon: '🦶' },
+    { id: 'headache', label: t('headache'), icon: '🤕' },
+    { id: 'bleeding', label: t('bleeding'), icon: '🩸' },
+    { id: 'nausea', label: t('nausea'), icon: '🤢' },
+    { id: 'vomiting', label: t('vomiting'), icon: '🤮' },
+    { id: 'abdominal_pain', label: t('abdominal_pain'), icon: '😣' },
+    { id: 'reduced_fetal_movement', label: t('reduced_fetal_movement'), icon: '👶' },
+    { id: 'blurred_vision', label: t('blurred_vision'), icon: '👁️' },
+    { id: 'chest_pain', label: t('chest_pain'), icon: '💔' },
+    { id: 'shortness_of_breath', label: t('shortness_of_breath'), icon: '😮‍💨' },
+    { id: 'fever', label: t('fever'), icon: '🌡️' },
+    { id: 'none', label: t('none'), icon: '✅' }
+  ];
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -288,8 +290,8 @@ const HealthDataForm = () => {
       <Navbar />
       <div className="form-content">
         <div className="form-header">
-          <h1>📋 Health Data Assessment</h1>
-          <p>Enter your health information for AI-powered risk prediction</p>
+          <h1>📋 {t('healthDataAssessment')}</h1>
+          <p>{t('enterHealthInfo')}</p>
         </div>
 
         {/* Progress */}
@@ -297,7 +299,7 @@ const HealthDataForm = () => {
           {[1,2,3,4].map(s => (
             <div key={s} className={`progress-step ${step >= s ? 'active' : ''} ${step === s ? 'current' : ''}`}>
               <div className="progress-step-circle">{step > s ? '✓' : s}</div>
-              <span>{['Basic Info', 'Vitals', 'Symptoms', 'Review'][s-1]}</span>
+              <span>{[t('reviewBasicInfo'), t('reviewVitals'), t('reviewSymptoms'), t('review')][s-1]}</span>
             </div>
           ))}
           <div className="progress-line">
@@ -313,25 +315,25 @@ const HealthDataForm = () => {
             {/* Step 1: Basic Info */}
             {step === 1 && (
               <div className="form-step fade-in">
-                <h2>👤 Basic Information</h2>
+                <h2>👤 {t('basicInfo')}</h2>
                 <div className="form-grid">
                   <div className="field-group">
-                    <label>Age (years) <span className="required">*</span></label>
+                    <label>{t('age')} <span className="required">*</span></label>
                     <input type="number" name="age" value={formData.age} onChange={handleChange}
                       placeholder="e.g. 24" min="15" max="50" required className="field-input" />
                   </div>
                   <div className="field-group">
-                    <label>Weight (kg) <span className="required">*</span></label>
+                    <label>{t('weight')} <span className="required">*</span></label>
                     <input type="number" name="weight" value={formData.weight} onChange={handleChange}
                       placeholder="e.g. 58" min="30" max="150" step="0.1" required className="field-input" />
                   </div>
                   <div className="field-group">
-                    <label>Height (cm)</label>
+                    <label>{t('height')}</label>
                     <input type="number" name="height" value={formData.height} onChange={handleChange}
                       placeholder="e.g. 158" min="100" max="220" className="field-input" />
                   </div>
                   <div className="field-group">
-                    <label>Pregnancy Trimester <span className="required">*</span></label>
+                    <label>{t('pregnancyTrimester')} <span className="required">*</span></label>
                     <select name="trimester" value={formData.trimester} onChange={handleChange} required className="field-input">
                       <option value="">Select trimester</option>
                       <option value="1">1st Trimester (Weeks 1-12)</option>
@@ -340,39 +342,39 @@ const HealthDataForm = () => {
                     </select>
                   </div>
                   <div className="field-group">
-                    <label>Weeks Pregnant</label>
+                    <label>{t('weeksPregnant')}</label>
                     <input type="number" name="weeksPregnant" value={formData.weeksPregnant} onChange={handleChange}
                       placeholder="e.g. 20" min="1" max="42" className="field-input" />
                   </div>
                   <div className="field-group">
-                    <label>Previous Pregnancies</label>
+                    <label>{t('previousPregnancies')}</label>
                     <input type="number" name="previousPregnancies" value={formData.previousPregnancies} onChange={handleChange}
                       placeholder="0" min="0" max="15" className="field-input" />
                   </div>
                   <div className="field-group full-width">
                     <label className="checkbox-label">
                       <input type="checkbox" name="previousComplications" checked={formData.previousComplications} onChange={handleChange} />
-                      <span>Had complications in previous pregnancies</span>
+                      <span>{t('previousComplications')}</span>
                     </label>
                   </div>
                   {formData.previousComplications && (
                     <div className="field-group full-width">
-                      <label>Describe Previous Complications</label>
+                      <label>{t('describePreviousComplications')}</label>
                       <textarea name="previousComplicationDetails" value={formData.previousComplicationDetails}
                         onChange={handleChange} placeholder="e.g. preeclampsia, miscarriage, C-section..."
                         className="field-input field-textarea" rows={3} />
                     </div>
                   )}
                   <div className="field-group">
-                    <label>Diet Type</label>
+                    <label>{t('dietType')}</label>
                     <select name="dietType" value={formData.dietType} onChange={handleChange} className="field-input">
-                      <option value="vegetarian">Vegetarian</option>
-                      <option value="non-vegetarian">Non-Vegetarian</option>
-                      <option value="vegan">Vegan</option>
+                      <option value="vegetarian">{t('vegetarian')}</option>
+                      <option value="non-vegetarian">{t('nonVegetarian')}</option>
+                      <option value="vegan">{t('vegan')}</option>
                     </select>
                   </div>
                   <div className="field-group">
-                    <label>Antenatal Visits So Far</label>
+                    <label>{t('antenatalVisitsSoFar')}</label>
                     <input type="number" name="antenatalVisits" value={formData.antenatalVisits} onChange={handleChange}
                       placeholder="0" min="0" max="20" className="field-input" />
                   </div>
@@ -383,46 +385,46 @@ const HealthDataForm = () => {
             {/* Step 2: Vitals */}
             {step === 2 && (
               <div className="form-step fade-in">
-                <h2>🩺 Health Vitals</h2>
+                <h2>🩺 {t('vitals')}</h2>
                 <div className="vitals-info">
                   <span>ℹ️</span> Enter your most recent test results. Ask your ASHA worker or doctor if unsure.
                 </div>
                 <div className="form-grid">
                   <div className="field-group">
-                    <label>Hemoglobin (g/dL) <span className="required">*</span></label>
+                    <label>{t('hemoglobin')} <span className="required">*</span></label>
                     <input type="number" name="hemoglobin" value={formData.hemoglobin} onChange={handleChange}
                       placeholder="Normal: 11-14 g/dL" min="3" max="20" step="0.1" required className="field-input" />
                     <span className="field-hint">Normal range: 11-14 g/dL</span>
                   </div>
                   <div className="field-group">
-                    <label>Blood Pressure — Systolic (mmHg) <span className="required">*</span></label>
+                    <label>{t('bloodPressureSys')} (mmHg) <span className="required">*</span></label>
                     <input type="number" name="bloodPressureSystolic" value={formData.bloodPressureSystolic} onChange={handleChange}
                       placeholder="Normal: 90-120" min="60" max="220" required className="field-input" />
                     <span className="field-hint">Upper number (e.g. 120 in 120/80)</span>
                   </div>
                   <div className="field-group">
-                    <label>Blood Pressure — Diastolic (mmHg) <span className="required">*</span></label>
+                    <label>{t('bloodPressureDia')} (mmHg) <span className="required">*</span></label>
                     <input type="number" name="bloodPressureDiastolic" value={formData.bloodPressureDiastolic} onChange={handleChange}
                       placeholder="Normal: 60-80" min="40" max="140" required className="field-input" />
                     <span className="field-hint">Lower number (e.g. 80 in 120/80)</span>
                   </div>
                   <div className="field-group">
-                    <label>Blood Sugar (mg/dL)</label>
+                    <label>{t('bloodSugar')}</label>
                     <input type="number" name="bloodSugar" value={formData.bloodSugar} onChange={handleChange}
                       placeholder="Normal fasting: 70-100" min="40" max="500" className="field-input" />
                     <span className="field-hint">Fasting blood sugar level</span>
                   </div>
                 </div>
                 <div className="supplements-section">
-                  <h3>Current Supplements</h3>
+                  <h3>{t('currentSupplements')}</h3>
                   <div className="supplements-grid">
                     <label className="supplement-label">
                       <input type="checkbox" name="ironSupplements" checked={formData.ironSupplements} onChange={handleChange} />
-                      <span>💊 Iron Supplements</span>
+                      <span>💊 {t('ironSupplements')}</span>
                     </label>
                     <label className="supplement-label">
                       <input type="checkbox" name="folicAcid" checked={formData.folicAcid} onChange={handleChange} />
-                      <span>💊 Folic Acid</span>
+                      <span>💊 {t('folicAcid')}</span>
                     </label>
                   </div>
                 </div>
@@ -432,44 +434,44 @@ const HealthDataForm = () => {
             {/* Step 3: Symptoms */}
             {step === 3 && (
               <div className="form-step fade-in">
-                <h2>🩹 Symptoms</h2>
-                <p className="step-desc">Select all symptoms you are currently experiencing</p>
+                <h2>🩹 {t('symptoms')}</h2>
+                <p className="step-desc">{t('selectSymptoms')}</p>
 
                 {/* Voice Input */}
                 <div className="voice-section">
                   <div className="voice-header">
                     <span>🎤</span>
                     <div>
-                      <strong>Voice Symptom Input</strong>
+                      <strong>{t('voiceInput')}</strong>
                       <p>Speak your symptoms in simple language (English or Hindi)</p>
                     </div>
                   </div>
                   <div className="voice-controls">
                     {!isListening ? (
                       <button type="button" className="voice-btn" onClick={startVoiceInput}>
-                        🎤 Start Speaking
+                        🎤 {t('startSpeaking')}
                       </button>
                     ) : (
                       <button type="button" className="voice-btn voice-btn-stop" onClick={stopVoiceInput}>
-                        ⏹️ Stop Recording
+                        ⏹️ {t('stopRecording')}
                       </button>
                     )}
                     {isListening && (
                       <div className="voice-listening">
                         <div className="voice-pulse"></div>
-                        <span>Listening...</span>
+                        <span>{t('listening')}</span>
                       </div>
                     )}
                   </div>
                   {voiceText && (
                     <div className="voice-result">
-                      <strong>Heard:</strong> "{voiceText}"
-                      <p>Symptoms detected and auto-selected below ✓</p>
+                      <strong>{t('heard')}</strong> "{voiceText}"
+                      <p>{t('symptomsDetectedAuto')}</p>
                     </div>
                   )}
                   {formData.customSymptoms.length > 0 && (
                     <div className="custom-symptoms-section">
-                      <strong>🗣️ Voice-Detected Additional Symptoms:</strong>
+                      <strong>🗣️ {t('voiceDetectedAdditional')}</strong>
                       <div className="custom-symptoms-list">
                         {formData.customSymptoms.map((cs, idx) => (
                           <span key={idx} className="custom-symptom-tag">
@@ -499,7 +501,7 @@ const HealthDataForm = () => {
                 </div>
 
                 <div className="field-group" style={{ marginTop: '20px' }}>
-                  <label>Additional Notes</label>
+                  <label>{t('additionalNotes')}</label>
                   <textarea name="notes" value={formData.notes} onChange={handleChange}
                     placeholder="Any other symptoms or concerns you want to mention..."
                     className="field-input field-textarea" rows={3} />
@@ -510,11 +512,11 @@ const HealthDataForm = () => {
             {/* Step 4: Review */}
             {step === 4 && (
               <div className="form-step fade-in">
-                <h2>✅ Review & Submit</h2>
-                <p className="step-desc">Please review your information before submitting</p>
+                <h2>✅ {t('reviewReviewSubmit')}</h2>
+                <p className="step-desc">{t('reviewInfo')}</p>
                 <div className="review-grid">
                   <div className="review-section">
-                    <h3>Basic Information</h3>
+                    <h3>{t('reviewBasicInfo')}</h3>
                     <div className="review-items">
                       <div className="review-item"><span>Age</span><strong>{formData.age} years</strong></div>
                       <div className="review-item"><span>Weight</span><strong>{formData.weight} kg</strong></div>
@@ -523,7 +525,7 @@ const HealthDataForm = () => {
                     </div>
                   </div>
                   <div className="review-section">
-                    <h3>Health Vitals</h3>
+                    <h3>{t('reviewVitals')}</h3>
                     <div className="review-items">
                       <div className="review-item"><span>Hemoglobin</span><strong>{formData.hemoglobin} g/dL</strong></div>
                       <div className="review-item"><span>Blood Pressure</span><strong>{formData.bloodPressureSystolic}/{formData.bloodPressureDiastolic} mmHg</strong></div>
@@ -531,7 +533,7 @@ const HealthDataForm = () => {
                     </div>
                   </div>
                   <div className="review-section full-width">
-                    <h3>Symptoms ({formData.symptoms.length + formData.customSymptoms.length})</h3>
+                    <h3>{t('reviewSymptoms')} ({formData.symptoms.length + formData.customSymptoms.length})</h3>
                     <div className="review-symptoms">
                       {formData.symptoms.length > 0 ? formData.symptoms.map(s => (
                         <span key={s} className="review-symptom-tag">
@@ -544,7 +546,7 @@ const HealthDataForm = () => {
                         </span>
                       )) : null}
                       {formData.symptoms.length === 0 && formData.customSymptoms.length === 0 && (
-                        <span className="no-symptoms">No symptoms selected</span>
+                        <span className="no-symptoms">{t('noSymptomsSelected')}</span>
                       )}
                     </div>
                   </div>
@@ -560,19 +562,19 @@ const HealthDataForm = () => {
             <div className="form-nav">
               {step > 1 && (
                 <button type="button" className="nav-btn-back" onClick={() => setStep(s => s - 1)}>
-                  ← Previous
+                  {t('previousArrow')}
                 </button>
               )}
               {step < 4 ? (
                 <button type="submit" className="nav-btn-next">
-                  Next Step →
+                  {t('nextStepArrow')}
                 </button>
               ) : (
                 <button type="submit" className="nav-btn-submit" disabled={loading}>
                   {loading ? (
-                    <><span className="btn-spinner"></span> Analyzing with AI...</>
+                    <><span className="btn-spinner"></span> {t('analyzing')}</>
                   ) : (
-                    '🤖 Get AI Risk Prediction'
+                    `🤖 ${t('getAIPrediction')}`
                   )}
                 </button>
               )}
